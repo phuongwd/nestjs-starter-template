@@ -21,7 +21,11 @@ jobs:
           cache: 'npm'
 
       - name: ":package: Install Dependencies"
-        run: npm ci
+        run: |
+          npm install
+          npm install @nestjs-modules/mailer@2.0.0
+          npm install
+          npm prune
 
       - name: ":art: Run Lint Checks"
         run: npm run lint
