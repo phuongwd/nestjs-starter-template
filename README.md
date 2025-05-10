@@ -1,3 +1,5 @@
+![CI](https://github.com/phuongwd/nestjs-starter-template/actions/workflows/ci.yml/badge.svg)
+
 # 🔐 SAASQALI
 
 A robust multi-tenant SAAS platform built with NestJS, providing secure organization management, custom domain handling, subscription management, and JWT-based authentication. This project implements best practices for modern SAAS platforms and follows clean architecture principles.

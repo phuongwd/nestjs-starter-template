@@ -1,0 +1,39 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ":inbox_tray: Checkout Repository"
+        uses: actions/checkout@v4
+
+      - name: ":green_circle: Setup Node.js"
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: ":package: Install Dependencies"
+        run: npm ci
+
+      - name: ":art: Run Lint Checks"
+        run: npm run lint
+
+      - name: ":test_tube: Run Unit Tests"
+        run: npm run test -- --coverage
+
+      - name: ":rocket: Run E2E Tests"
+        run: npm run test:e2e
+
+      - name: ":package: Build Application"
+        run: npm run build
+
+      - name: ":white_check_mark: Complete"
+        run: echo "CI pipeline finished successfully!"
