@@ -25,7 +25,10 @@ describe('Setup CLI Commands', () => {
 
   const mockSetupService = {
     generateToken: jest.fn(),
-    validateToken: jest.fn(),
+    validateToken: jest.fn().mockImplementation((token) => {
+      if (token && token.length === 32) return Promise.resolve(true);
+      return Promise.resolve(false);
+    }),
     completeSetup: jest.fn(),
     isSetupRequired: jest.fn(),
   };

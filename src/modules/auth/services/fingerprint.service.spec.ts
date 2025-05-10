@@ -11,6 +11,7 @@ describe('FingerprintService', () => {
   let service: FingerprintService;
   let mockConfigService: ConfigService;
   let currentTime: number;
+  let logger: Logger;
 
   // Mock request factory
   const createMockRequest = (
@@ -52,6 +53,7 @@ describe('FingerprintService', () => {
     }).compile();
 
     service = module.get<FingerprintService>(FingerprintService);
+    logger = module.get<Logger>(Logger);
   });
 
   afterEach(() => {

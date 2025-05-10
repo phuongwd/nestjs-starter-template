@@ -55,8 +55,14 @@ describe('DomainRoutingMiddleware', () => {
   });
 
   it('should skip middleware for default domain', async () => {
-    const req = { hostname: 'localhost' } as any;
-    const res = {} as any;
+    const req = {
+      hostname: 'localhost',
+      headers: {},
+      [ORGANIZATION_HEADER]: undefined
+    } as any;
+    const res = {
+      setHeader: jest.fn()
+    } as any;
     const next = jest.fn();
 
     await middleware.use(req, res, next);
@@ -66,7 +72,11 @@ describe('DomainRoutingMiddleware', () => {
   });
 
   it('should use cached organization ID if available', async () => {
-    const req = { hostname: 'test.example.com' } as any;
+    const req = {
+      hostname: 'test.example.com',
+      headers: {},
+      [ORGANIZATION_HEADER]: undefined
+    } as any;
     const res = {
       setHeader: jest.fn(),
     } as any;
