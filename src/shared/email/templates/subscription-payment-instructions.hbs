@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Payment Instructions</title>
+    <style>
+        .payment-details {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .payment-method {
+            margin: 20px 0;
+        }
+        .important {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h2>Payment Instructions</h2>
+    <p>Dear {{organizationName}},</p>
+    
+    <p>Thank you for choosing our service! Please find below the payment instructions for your subscription.</p>
+    
+    <div class="payment-details">
+        <p><strong>Subscription Details:</strong></p>
+        <ul>
+            <li>Plan: {{planName}}</li>
+            <li>Amount: {{amount}} {{currency}}</li>
+            <li>Organization ID: {{organizationId}}</li>
+        </ul>
+    </div>
+
+    <div class="payment-method">
+        <h3>Payment Methods:</h3>
+        
+        <h4>1. PayPal</h4>
+        <ul>
+            <li>PayPal Email: {{paypalEmail}}</li>
+            <li>Reference: ORG-{{organizationId}}</li>
+        </ul>
+
+        <h4>2. Wise</h4>
+        <ul>
+            <li>Account Details: {{wiseAccountInfo}}</li>
+            <li>Reference: ORG-{{organizationId}}</li>
+        </ul>
+    </div>
+
+    <p class="important">Important: Please include your Organization ID (ORG-{{organizationId}}) in the payment reference.</p>
+
+    <p>After making the payment, please:</p>
+    <ol>
+        <li>Keep your payment confirmation</li>
+        <li>Reply to this email with the payment confirmation</li>
+        <li>We will activate your subscription within 24 hours after payment verification</li>
+    </ol>
+
+    <p>If you have any questions or need assistance, please contact our support team at {{supportEmail}}.</p>
+
+    <p>Best regards,<br>
+    Your Team</p>
+</body>
+</html> 

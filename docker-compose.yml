@@ -1,0 +1,143 @@
+# Base configuration for all environments
+version: '3.8'
+
+x-app-common: &app-common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  networks:
+    - nanoe-network
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+x-postgres-common: &postgres-common
+  image: postgres:16-alpine
+  networks:
+    - nanoe-network
+  healthcheck:
+    test: ['CMD-SHELL', 'pg_isready -U postgres']
+    interval: 5s
+    timeout: 5s
+    retries: 5
+  restart: unless-stopped
+
+services:
+  app:
+    <<: *app-common
+    container_name: nanoe-api
+    build:
+      target: development
+    ports:
+      - '3001:3001'
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      # System Configuration
+      - DEPLOYMENT_TYPE=cloud
+      - LOG_LEVEL=debug
+      # Feature Flags
+      - FEATURE_EMAIL_ENABLED=false
+      - FEATURE_CUSTOM_DOMAINS_ENABLED=true
+      - FEATURE_CUSTOM_DOMAINS_WILDCARD=true
+      - FEATURE_CUSTOM_DOMAINS_SSL=true
+      - CUSTOM_DOMAINS_SSL_PROVIDER=none
+      # SSL Configuration
+      - SSL_ACCOUNT_KEY=test-account-key
+      - SSL_CERT_DIR=/app/certs
+      - ACME_CHALLENGE_DIR=/app/challenges
+      - SSL_ADMIN_EMAIL=admin@admin.com
+      # DNS Configuration
+      - DNS_A_RECORD=127.0.0.1
+      # Email Configuration
+      - EMAIL_PROVIDER=smtp
+      # SMTP Configuration
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_USER=your-email@gmail.com
+      - SMTP_PASS=your-app-password
+      - SMTP_FROM=your-email@gmail.com
+      - SMTP_SECURE=false
+      # Database
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/nanoe?schema=public
+      # Auth
+      - JWT_SECRET=your-jwt-secret
+      - JWT_EXPIRATION=3600
+      # Redis Configuration
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CACHE_TTL=3600
+    volumes:
+      - .:/app:delegated
+      - /app/node_modules
+    command: npm run start:dev
+    develop:
+      watch:
+        - path: ./src
+          target: /app/src
+          action: sync
+        - path: ./package.json
+          target: /app/package.json
+          action: sync
+        - path: ./package-lock.json
+          target: /app/package-lock.json
+          action: sync
+        - path: ./prisma
+          target: /app/prisma
+          action: sync
+
+  postgres:
+    <<: *postgres-common
+    container_name: nanoe-postgres
+    ports:
+      - '5433:5432'
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=nanoe
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  pgadmin:
+    container_name: nanoe-pgadmin
+    image: dpage/pgadmin4
+    ports:
+      - '5051:80'
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nanoe-network
+    restart: unless-stopped
+
+  redis:
+    container_name: nanoe-redis
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    networks:
+      - nanoe-network
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+networks:
+  nanoe-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+  redis_data:

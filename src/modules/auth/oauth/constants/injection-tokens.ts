@@ -1,0 +1,8 @@
+export const OAUTH_INJECTION_TOKENS = {
+  REPOSITORY: {
+    OAUTH_USER: 'OAUTH_USER_REPOSITORY',
+  },
+  PROVIDER: {
+    OAUTH: 'OAUTH_PROVIDERS',
+  },
+} as const;

@@ -1,0 +1,55 @@
+# Extend base configuration for test environment
+version: '3.8'
+
+x-postgres-common: &postgres-common
+  image: postgres:16-alpine
+  healthcheck:
+    test: ['CMD-SHELL', 'pg_isready -U postgres']
+    interval: 5s
+    timeout: 5s
+    retries: 5
+  restart: unless-stopped
+
+services:
+  test-db:
+    <<: *postgres-common
+    container_name: nanoe_test_db
+    ports:
+      - '54321:5432'
+    environment:
+      - POSTGRES_USER=test_user
+      - POSTGRES_PASSWORD=test_password
+      - POSTGRES_DB=nanoe_test
+      - PGUSER=test_user
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U test_user -d nanoe_test']
+      interval: 1s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    tmpfs:
+      - /var/lib/postgresql/data
+    restart: 'no'
+    networks:
+      - nanoe-test-network
+
+  test-redis:
+    image: redis:7-alpine
+    container_name: nanoe_test_redis
+    ports:
+      - '63790:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 1s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    tmpfs:
+      - /data
+    restart: 'no'
+    networks:
+      - nanoe-test-network
+
+networks:
+  nanoe-test-network:
+    driver: bridge

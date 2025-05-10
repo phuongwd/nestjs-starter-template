@@ -1,0 +1,153 @@
+services:
+  - type: web
+    name: nanoe-api
+    env: node
+    region: singapore
+    plan: starter
+    buildCommand: npm ci && npx prisma generate && npx prisma migrate deploy && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    disk:
+      name: uploads
+      mountPath: /app/uploads
+      sizeGB: 1
+    scaling:
+      minInstances: 1
+      maxInstances: 1
+      targetMemoryPercent: 80
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+    envVars:
+      # Application
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DEPLOYMENT_TYPE
+        value: cloud
+      - key: TZ
+        value: UTC
+
+      # Rate Limiting
+      - key: RATE_LIMIT_TTL
+        value: 60
+      - key: RATE_LIMIT_MAX
+        value: 100
+
+      # Upload Configuration
+      - key: UPLOAD_MAX_SIZE
+        value: 5242880 # 5MB in bytes
+      - key: UPLOAD_ALLOWED_TYPES
+        value: 'image/jpeg,image/png,application/pdf'
+
+      # API Configuration
+      - key: API_VERSION
+        value: 1
+      - key: API_PREFIX
+        value: api/v
+      - key: API_SUPPORTED_VERSIONS
+        value: '1,2'
+      - key: API_DEPRECATED_VERSIONS
+        value: '1'
+
+      # Database Configuration
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nanoe-db
+          property: connectionString
+
+      # Feature Flags
+      - key: FEATURE_EMAIL_ENABLED
+        value: false
+      - key: EMAIL_PROVIDER
+        value: smtp
+
+      # Email Configuration
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_SECURE
+        value: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        value: 'no-reply@nanoe.edu'
+
+      # Security
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRATION
+        value: 3600
+      - key: COOKIE_SECRET
+        sync: false
+
+      # Subscription Configuration
+      - key: FREE_PLAN_MEMBER_LIMIT
+        value: 5
+      - key: FREE_PLAN_PROJECT_LIMIT
+        value: 3
+      - key: FREE_PLAN_STORAGE_LIMIT
+        value: 100
+      - key: TRIAL_DURATION_DAYS
+        value: 14
+      - key: TRIAL_MEMBER_LIMIT
+        value: 10
+
+      # External Services
+      - key: REDIS_URL
+        sync: false
+        # Redis connection string provided by Render Redis service
+        # Format: redis://default:password@redis-instance.render.com:6379
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+
+      # Application Settings
+      - key: APP_NAME
+        value: 'NanoeEdu'
+      - key: FRONTEND_URL
+        sync: false
+
+      # Logging
+      - key: LOG_LEVEL
+        value: info
+
+      # CORS Configuration
+      - key: ALLOWED_ORIGINS
+        sync: false
+
+      # Additional Application Settings
+      - key: APP_URL
+        sync: false
+      - key: APP_DESCRIPTION
+        value: 'Multi-tenant SAAS Platform API'
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: STORAGE_LOCAL_DIR
+        value: '/app/storage'
+      - key: STORAGE_ROOT_PATH
+        value: '/'
+      - key: STORAGE_TEMP_DIR
+        value: '/app/tmp'
+
+databases:
+  - name: nanoe-db
+    region: singapore
+    plan: starter
+    postgresMajorVersion: 16
+    ipAllowList: []
+    backup:
+      enabled: true
+      schedule: 0 0 * * * # Daily backup at midnight UTC

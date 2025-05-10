@@ -1,0 +1,419 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  Int                     @id @default(autoincrement())
+  email               String                  @unique
+  password            String?
+  firstName           String
+  lastName            String
+  provider            String?
+  providerId          String?
+  picture             String?
+  resetToken          String?
+  resetTokenExpiresAt DateTime?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  adminAuditLogs      AdminAuditLog[]
+  adminSessions       AdminSession[]
+  auditLogs           AuditLog[]
+  organizationMembers OrganizationMember[]
+  subscriptionNotes   SubscriptionAdminNote[] @relation("SubscriptionNoteAuthor")
+  systemRoles         SystemRole[]            @relation("UserSystemRoles")
+  accessTokens        AccessToken[]
+
+  @@index([provider, providerId])
+  @@map("users")
+}
+
+model Organization {
+  id                   Int                   @id @default(autoincrement())
+  name                 String
+  slug                 String                @unique
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  description          String?
+  pendingRegistrations PendingRegistration[]
+  customDomains        CustomDomain[]
+  memberActivities     MemberActivity[]
+  members              OrganizationMember[]
+  roles                Role[]
+  subscription         Subscription?
+
+  @@map("organizations")
+}
+
+model Role {
+  id             Int              @id @default(autoincrement())
+  name           String
+  description    String?
+  organizationId Int?
+  isSystemRole   Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  members        MemberRole[]
+  permissions    RolePermission[]
+  organization   Organization?    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([name, organizationId])
+  @@index([organizationId])
+  @@map("roles")
+}
+
+model Permission {
+  id           Int              @id @default(autoincrement())
+  name         String           @unique
+  description  String?
+  resourceType String
+  action       String
+  createdAt    DateTime         @default(now())
+  roles        RolePermission[]
+
+  @@index([resourceType, action])
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       Int
+  permissionId Int
+  createdAt    DateTime   @default(now())
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model OrganizationMember {
+  id              Int              @id @default(autoincrement())
+  organizationId  Int
+  userId          Int?
+  status          String           @default("INVITED")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  invitationToken String?          @unique
+  email           String
+  activities      MemberActivity[]
+  roles           MemberRole[]
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user            User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@unique([organizationId, email])
+  @@index([organizationId])
+  @@index([userId])
+  @@index([email])
+  @@index([status])
+  @@index([organizationId, status])
+  @@map("organization_members")
+}
+
+model MemberRole {
+  memberId  Int
+  roleId    Int
+  createdAt DateTime           @default(now())
+  member    OrganizationMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  role      Role               @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([memberId, roleId])
+  @@index([memberId])
+  @@index([roleId])
+  @@index([memberId, roleId])
+  @@map("member_roles")
+}
+
+model Plan {
+  id            Int            @id @default(autoincrement())
+  name          String
+  description   String?
+  features      Json?
+  price         Decimal        @db.Decimal(10, 2)
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  interval      String         @default("month")
+  memberLimit   Int            @default(5)
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id                 Int                     @id @default(autoincrement())
+  organizationId     Int                     @unique
+  planId             Int
+  status             String
+  startDate          DateTime
+  endDate            DateTime?
+  trialEndsAt        DateTime?
+  canceledAt         DateTime?
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  paymentMethodId    String?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  lastPaymentDate    DateTime?
+  nextPaymentDate    DateTime?
+  paymentMethod      String?
+  paymentReference   String?
+  billingHistory     BillingHistory[]
+  adminNotes         SubscriptionAdminNote[]
+  organization       Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan               Plan                    @relation(fields: [planId], references: [id])
+
+  @@index([planId])
+  @@map("subscriptions")
+}
+
+model SubscriptionAdminNote {
+  id             Int          @id @default(autoincrement())
+  subscriptionId Int
+  note           String
+  type           String
+  createdBy      Int
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  author         User         @relation("SubscriptionNoteAuthor", fields: [createdBy], references: [id])
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([createdBy])
+  @@map("subscription_admin_notes")
+}
+
+model BillingHistory {
+  id              Int          @id @default(autoincrement())
+  subscriptionId  Int
+  amount          Decimal      @db.Decimal(10, 2)
+  currency        String       @default("USD")
+  status          String
+  paymentMethod   String?
+  paymentIntentId String?
+  invoiceUrl      String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  subscription    Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@map("billing_history")
+}
+
+model MemberActivity {
+  id             Int                @id @default(autoincrement())
+  organizationId Int
+  memberId       Int
+  action         String
+  metadata       Json?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  member         OrganizationMember @relation(fields: [memberId], references: [id])
+  organization   Organization       @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+  @@index([memberId])
+  @@index([createdAt])
+  @@index([organizationId, memberId])
+  @@index([organizationId, action])
+  @@map("member_activities")
+}
+
+model PendingRegistration {
+  id              Int          @id @default(autoincrement())
+  email           String
+  organizationId  Int
+  invitationToken String       @unique
+  roleNames       String[]
+  expiresAt       DateTime
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([organizationId])
+  @@index([invitationToken])
+}
+
+model CustomDomain {
+  id                Int             @id @default(autoincrement())
+  domain            String          @unique
+  organizationId    Int
+  status            DomainStatus    @default(PENDING)
+  verificationToken String?
+  verifiedAt        DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  organization      Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sslCertificate    SslCertificate?
+
+  @@index([domain])
+  @@index([organizationId])
+  @@map("custom_domains")
+}
+
+model SslCertificate {
+  id          Int          @id @default(autoincrement())
+  domainId    Int          @unique
+  certificate String
+  privateKey  String
+  issuedAt    DateTime     @default(now())
+  expiresAt   DateTime
+  provider    String       @default("letsencrypt")
+  status      CertStatus   @default(ACTIVE)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  domain      CustomDomain @relation(fields: [domainId], references: [id])
+
+  @@map("ssl_certificates")
+}
+
+model SystemRole {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  permissions Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       User[]   @relation("UserSystemRoles")
+
+  @@map("system_roles")
+}
+
+model AdminSession {
+  id           Int       @id @default(autoincrement())
+  userId       Int
+  token        String    @unique
+  ipAddress    String?
+  userAgent    String?
+  lastActivity DateTime  @default(now())
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("admin_sessions")
+}
+
+model AdminAuditLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  action     String
+  resource   String
+  resourceId String?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
+  @@map("admin_audit_logs")
+}
+
+model SecurityAlert {
+  id         Int      @id @default(autoincrement())
+  type       String
+  details    Json
+  status     String   @default("PENDING")
+  created_at DateTime @default(now())
+  updated_at DateTime
+
+  @@map("security_alerts")
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  action     String
+  resource   String
+  details    Json
+  ip_address String
+  timestamp  DateTime @default(now())
+  users      User     @relation(fields: [user_id], references: [id])
+
+  @@index([action])
+  @@index([timestamp])
+  @@index([user_id])
+  @@map("audit_logs")
+}
+
+model SetupToken {
+  id           String       @id @default(uuid())
+  token        String       @unique
+  expiresAt    DateTime
+  isUsed       Boolean      @default(false)
+  usedAt       DateTime?
+  createdAt    DateTime     @default(now())
+  createdByIp  String
+  usedByIp     String?
+  fingerprint  String?
+  environment  String
+  metadata     Json?
+  auditEntries SetupAudit[]
+
+  @@index([token])
+  @@index([isUsed])
+  @@index([environment])
+  @@map("setup_tokens")
+}
+
+model SetupAudit {
+  id        String     @id @default(uuid())
+  tokenId   String
+  action    String
+  ip        String
+  timestamp DateTime   @default(now())
+  metadata  Json?
+  success   Boolean
+  error     String?
+  token     SetupToken @relation(fields: [tokenId], references: [id])
+
+  @@index([action])
+  @@index([timestamp])
+  @@index([tokenId])
+  @@map("setup_audit")
+}
+
+model AccessToken {
+  id          String    @id @default(uuid())
+  name        String
+  token       String    @unique
+  userId      Int
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  description String?
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime?
+  lastUsedAt  DateTime?
+  scope       String[]  @default(["all"])
+
+  @@unique([userId, name])
+  @@index([token])
+  @@map("access_tokens")
+}
+
+enum DomainStatus {
+  PENDING
+  VERIFIED
+  FAILED
+  DNS_CONFIGURING
+}
+
+enum CertStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+}

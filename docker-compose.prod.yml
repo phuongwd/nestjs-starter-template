@@ -1,0 +1,374 @@
+# Production configuration
+version: '3.8'
+
+x-app-common: &app-common
+  networks:
+    - nanoe-network
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  restart: always
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '10m'
+      max-file: '3'
+  security_opt:
+    - no-new-privileges:true
+  ulimits:
+    nofile:
+      soft: 65536
+      hard: 65536
+
+x-postgres-common: &postgres-common
+  image: postgres:15-alpine
+  networks:
+    - nanoe-network
+  command: >
+    postgres 
+    -c shared_buffers=128MB
+    -c max_connections=100
+    -c effective_cache_size=512MB
+    -c maintenance_work_mem=128MB
+    -c checkpoint_completion_target=0.9
+    -c wal_buffers=16MB
+    -c default_statistics_target=100
+    -c random_page_cost=1.1
+    -c effective_io_concurrency=200
+    -c work_mem=4MB
+    -c min_wal_size=1GB
+    -c max_wal_size=4GB
+    -c tcp_keepalives_idle=60
+    -c tcp_keepalives_interval=10
+    -c tcp_keepalives_count=3
+  healthcheck:
+    test: ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME:-nanoe}']
+    interval: 5s
+    timeout: 5s
+    retries: 5
+  restart: always
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '10m'
+      max-file: '3'
+  deploy:
+    resources:
+      limits:
+        cpus: '1'
+        memory: 1G
+      reservations:
+        cpus: '0.5'
+        memory: 512M
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  app:
+    <<: *app-common
+    image: nanoe-api:${APP_VERSION:-prod}
+    container_name: nanoe-api
+    env_file:
+      - .env.prod
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'wget',
+          '--no-verbose',
+          '--tries=1',
+          '--spider',
+          'http://localhost:3000/api/v1/health',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    user: 'node'
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run
+    volumes:
+      - app-storage:/app/storage
+      - app-tmp:/app/tmp
+      - app-uploads:/app/uploads
+
+  postgres:
+    <<: *postgres-common
+    container_name: nanoe-postgres
+    environment:
+      - POSTGRES_USER=${DB_USERNAME:-nanoe}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-nanoe}
+      - POSTGRES_DB=${DB_DATABASE:-nanoe}
+      # Performance tuning
+      - POSTGRES_MAX_CONNECTIONS=100
+      - POSTGRES_SHARED_BUFFERS=128MB
+    volumes:
+      - nanoe-postgres-data:/var/lib/postgresql/data
+      - nanoe-postgres-backups:/backups
+    command: >
+      bash -c "
+        mkdir -p /var/spool/cron/crontabs
+        echo '0 0 * * * pg_dump -U ${DB_USERNAME:-nanoe} ${DB_DATABASE:-nanoe} > /backups/backup-$(date +\%Y\%m\%d).sql' > /var/spool/cron/crontabs/postgres
+        && chmod 600 /var/spool/cron/crontabs/postgres
+        && crond
+        && postgres
+        -c shared_buffers=128MB
+        -c max_connections=100
+        -c effective_cache_size=512MB
+        -c maintenance_work_mem=128MB
+        -c checkpoint_completion_target=0.9
+        -c wal_buffers=16MB
+        -c default_statistics_target=100
+        -c random_page_cost=1.1
+        -c effective_io_concurrency=200
+        -c work_mem=4MB
+        -c min_wal_size=1GB
+        -c max_wal_size=4GB
+        -c tcp_keepalives_idle=60
+        -c tcp_keepalives_interval=10
+        -c tcp_keepalives_count=3
+      "
+
+  redis:
+    image: redis:7-alpine
+    container_name: nanoe-redis
+    volumes:
+      - nanoe-redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nanoe-network
+    restart: always
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD:-redis}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+      --appendfsync everysec
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    security_opt:
+      - no-new-privileges:true
+
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: nanoe-nginx
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    ports:
+      - '80:80'
+    depends_on:
+      - app
+    networks:
+      - nanoe-network
+    restart: always
+    healthcheck:
+      test: ['CMD', 'nginx', '-t']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    user: nginx
+    read_only: true
+    tmpfs:
+      - /var/run
+      - /var/cache/nginx
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    security_opt:
+      - no-new-privileges:true
+
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: nanoe-prometheus
+    volumes:
+      - ./prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - '9090:9090'
+    networks:
+      - nanoe-network
+    restart: always
+    user: '65534:65534' # nobody:nobody
+    read_only: true
+    tmpfs:
+      - /tmp
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: nanoe-grafana
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - '3000:3000'
+    networks:
+      - nanoe-network
+    restart: always
+    depends_on:
+      - prometheus
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+
+  node-exporter:
+    image: prom/node-exporter:v1.6.1
+    container_name: nanoe-node-exporter
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    ports:
+      - '9100:9100'
+    networks:
+      - nanoe-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 128M
+    security_opt:
+      - no-new-privileges:true
+    user: '65534:65534' # nobody:nobody
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.2
+    container_name: nanoe-cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - '8080:8080'
+    networks:
+      - nanoe-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.3'
+          memory: 256M
+    security_opt:
+      - no-new-privileges:true
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.14.0
+    container_name: nanoe-postgres-exporter
+    environment:
+      - DATA_SOURCE_NAME=postgresql://${DB_USERNAME:-nanoe}:${DB_PASSWORD:-nanoe}@postgres:5432/${DB_DATABASE:-nanoe}?sslmode=disable
+    ports:
+      - '9187:9187'
+    networks:
+      - nanoe-network
+    restart: always
+    depends_on:
+      - postgres
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 128M
+    security_opt:
+      - no-new-privileges:true
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.55.0
+    container_name: nanoe-redis-exporter
+    environment:
+      - REDIS_ADDR=redis://redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis}
+    ports:
+      - '9121:9121'
+    networks:
+      - nanoe-network
+    restart: always
+    depends_on:
+      - redis
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 128M
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  nanoe-network:
+    external: true
+    name: nanoe-be_nanoe-network
+
+volumes:
+  nanoe-postgres-data:
+  nanoe-postgres-backups:
+  nanoe-redis-data:
+  app-storage:
+  app-tmp:
+  app-uploads:
+  prometheus-data:
+  grafana-data:

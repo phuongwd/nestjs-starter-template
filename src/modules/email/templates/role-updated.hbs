@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .content {
+      background: #f9f9f9;
+      padding: 20px;
+      border-radius: 5px;
+    }
+    .button {
+      display: inline-block;
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      text-decoration: none;
+      border-radius: 5px;
+      margin: 20px 0;
+    }
+    .footer {
+      margin-top: 30px;
+      font-size: 12px;
+      color: #666;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>Role Updated in {{organizationName}}</h2>
+  </div>
+  
+  <div class="content">
+    <p>Hello {{userName}},</p>
+    
+    <p>Your role in {{organizationName}} has been updated.</p>
+    
+    <p>Your current roles are: {{newRoles}}</p>
+    
+    <p>This change may affect your access to certain features and resources within the organization.</p>
+    
+    <p style="text-align: center;">
+      <a href="{{appUrl}}/organizations/members/profile" class="button">View Your Profile</a>
+    </p>
+    
+    <p>If you have any questions about your new roles and permissions, please contact your organization administrators.</p>
+  </div>
+  
+  <div class="footer">
+    <p>© {{organizationName}} - <a href="{{appUrl}}">Visit our website</a></p>
+  </div>
+</body>
+</html> 

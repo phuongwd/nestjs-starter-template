@@ -1,0 +1,10 @@
+/**
+ * Repository injection tokens for the organizations module
+ */
+export const ORGANIZATION_REPOSITORY = Symbol('ORGANIZATION_REPOSITORY');
+export const MEMBER_REPOSITORY = Symbol('MEMBER_REPOSITORY');
+export const MEMBER_ACTIVITY_REPOSITORY = Symbol('MEMBER_ACTIVITY_REPOSITORY');
+export const PENDING_REGISTRATION_REPOSITORY = Symbol(
+  'PENDING_REGISTRATION_REPOSITORY',
+);
+export const MEMBER_ROLE_REPOSITORY = Symbol('MEMBER_ROLE_REPOSITORY');
