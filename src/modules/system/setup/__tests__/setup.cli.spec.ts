@@ -11,9 +11,11 @@ jest.mock('inquirer');
 const mockedInquirer = inquirer as jest.Mocked<typeof inquirer>;
 
 // Mock process.exit but store it in a variable we use
-jest.spyOn(process, 'exit').mockImplementation((code?: number | string | null) => {
-  throw new Error(`Process.exit(${code})`);
-});
+jest
+  .spyOn(process, 'exit')
+  .mockImplementation((code?: number | string | null) => {
+    throw new Error(`Process.exit(${code})`);
+  });
 
 describe('Setup CLI Commands', () => {
   let setupCommand: SetupCommand;
@@ -65,8 +67,10 @@ describe('Setup CLI Commands', () => {
     }).compile();
 
     setupCommand = module.get<SetupCommand>(SetupCommand);
-    generateTokenCommand = module.get<GenerateTokenCommand>(GenerateTokenCommand);
-    completeSetupCommand = module.get<CompleteSetupCommand>(CompleteSetupCommand);
+    generateTokenCommand =
+      module.get<GenerateTokenCommand>(GenerateTokenCommand);
+    completeSetupCommand =
+      module.get<CompleteSetupCommand>(CompleteSetupCommand);
 
     // Reset all mocks
     jest.clearAllMocks();
@@ -322,18 +326,18 @@ describe('Setup CLI Commands', () => {
       );
 
       // Test email validation
-      const emailQuestion = (mockedInquirer.prompt.mock.calls[0][0] as any[]).find(
-        (q) => q.name === 'email',
-      );
+      const emailQuestion = (
+        mockedInquirer.prompt.mock.calls[0][0] as any[]
+      ).find((q) => q.name === 'email');
       expect(emailQuestion.validate('invalid-email')).toBe(
         'Please enter a valid email address',
       );
       expect(emailQuestion.validate('valid@email.com')).toBe(true);
 
       // Test password validation
-      const passwordQuestion = (mockedInquirer.prompt.mock.calls[0][0] as any[]).find(
-        (q) => q.name === 'password',
-      );
+      const passwordQuestion = (
+        mockedInquirer.prompt.mock.calls[0][0] as any[]
+      ).find((q) => q.name === 'password');
       expect(passwordQuestion.validate('123')).toBe(
         'Password must be at least 8 characters long',
       );
