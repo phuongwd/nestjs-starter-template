@@ -73,20 +73,20 @@ services:
       - .:/app:delegated
       - /app/node_modules
     command: npm run start:dev
-    develop:
-      watch:
-        - path: ./src
-          target: /app/src
-          action: sync
-        - path: ./package.json
-          target: /app/package.json
-          action: sync
-        - path: ./package-lock.json
-          target: /app/package-lock.json
-          action: sync
-        - path: ./prisma
-          target: /app/prisma
-          action: sync
+    # develop:
+    #   watch:
+    #     - path: ./src
+    #       target: /app/src
+    #       action: sync
+    #     - path: ./package.json
+    #       target: /app/package.json
+    #       action: sync
+    #     - path: ./package-lock.json
+    #       target: /app/package-lock.json
+    #       action: sync
+    #     - path: ./prisma
+    #       target: /app/prisma
+    #       action: sync
 
   postgres:
     <<: *postgres-common

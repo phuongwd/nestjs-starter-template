@@ -8,12 +8,12 @@ import { SetupController } from './setup/controllers/setup.controller';
 import { SETUP_TOKENS } from './setup/constants/setup.constants';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { SecurityContextService } from './setup/services/security-context.service';
-import { SetupSecurityGuard } from './setup/guards/setup-security.guard';
 import { SetupAuditInterceptor } from './setup/interceptors/setup-audit.interceptor';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { PrismaService } from '@/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { ISetupTokenRepository } from './setup/interfaces/setup-token.interface';
+import { PasswordService } from '@/modules/users/services/password.service';
 
 /**
  * System Module
@@ -45,18 +45,15 @@ import { ISetupTokenRepository } from './setup/interfaces/setup-token.interface'
         prisma: PrismaService,
         config: ConfigService,
         repository: ISetupTokenRepository,
+        pwService: PasswordService,
       ) => {
-        return new SetupService(prisma, config, repository);
+        return new SetupService(prisma, config, repository, pwService);
       },
       inject: [
         PrismaService,
         ConfigService,
         SETUP_TOKENS.REPOSITORY.SETUP_TOKEN,
       ],
-    },
-    {
-      provide: APP_GUARD,
-      useClass: SetupSecurityGuard,
     },
     {
       provide: APP_INTERCEPTOR,

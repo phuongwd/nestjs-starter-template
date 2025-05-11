@@ -15,6 +15,7 @@ import {
 } from '../constants/setup.constants';
 import { SetupCompletionData } from '../interfaces/setup-service.interface';
 import { PrismaService } from '@/prisma/prisma.service';
+import { PasswordService } from '@/modules/users/services/password.service';
 
 /**
  * Setup service implementation
@@ -26,6 +27,7 @@ export class SetupService implements ISetupService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly setupTokenRepository: ISetupTokenRepository,
+    private readonly passwordService: PasswordService,
   ) {}
 
   /**
@@ -86,13 +88,17 @@ export class SetupService implements ISetupService {
       success: true,
     });
 
+    const hashedPassword = await this.passwordService.hashPassword(
+      data.password,
+    );
+
     try {
       await this.prisma.$transaction(async (tx) => {
         // Create admin user
         const user = await tx.user.create({
           data: {
             email: data.email,
-            password: data.password, // Note: Should be hashed by auth service
+            password: hashedPassword,
             firstName: data.firstName,
             lastName: data.lastName,
           },

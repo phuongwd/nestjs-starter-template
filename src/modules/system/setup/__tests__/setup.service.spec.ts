@@ -13,6 +13,7 @@ import {
 } from '@prisma/client';
 import { ISetupTokenRepository } from '../interfaces/setup-token.interface';
 import { SETUP_TOKENS } from '../constants/setup.constants';
+import { PasswordService } from '@/modules/users/services/password.service';
 
 describe('SetupService', () => {
   let service: SetupService;
@@ -73,7 +74,8 @@ describe('SetupService', () => {
             prisma: PrismaService,
             config: ConfigService,
             repository: ISetupTokenRepository,
-          ) => new SetupService(prisma, config, repository),
+            pwService: PasswordService,
+          ) => new SetupService(prisma, config, repository, pwService),
           inject: [
             PrismaService,
             ConfigService,
