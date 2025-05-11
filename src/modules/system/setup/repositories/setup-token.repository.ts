@@ -60,14 +60,15 @@ export class SetupTokenRepository implements ISetupTokenRepository {
     usedByIp: string,
     tx?: Prisma.TransactionClient,
   ): Promise<SetupToken> {
-    const prismaClient = tx || this.prisma;
     const updateData: Prisma.SetupTokenUpdateInput = {
       isUsed: true,
       usedAt: new Date(),
       usedByIp,
     };
 
-    return prismaClient.setupToken.update({
+    // Use the provided transaction client if available, otherwise use the main prisma client
+    const client = tx || this.prisma;
+    return client.setupToken.update({
       where: { id },
       data: updateData,
     });
@@ -82,7 +83,6 @@ export class SetupTokenRepository implements ISetupTokenRepository {
     data: CreateSetupAuditData,
     tx?: Prisma.TransactionClient,
   ): Promise<SetupAudit> {
-    const prismaClient = tx || this.prisma;
     const createData: Prisma.SetupAuditCreateInput = {
       token: { connect: { id: data.tokenId } },
       action: data.action,
@@ -93,7 +93,9 @@ export class SetupTokenRepository implements ISetupTokenRepository {
       timestamp: new Date(),
     };
 
-    return prismaClient.setupAudit.create({
+    // Use the provided transaction client if available, otherwise use the main prisma client
+    const client = tx || this.prisma;
+    return client.setupAudit.create({
       data: createData,
     });
   }
