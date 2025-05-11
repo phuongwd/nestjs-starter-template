@@ -119,8 +119,16 @@ async function bootstrap(): Promise<void> {
   // Security - Helmet for security headers
   app.use(
     helmet({
-      contentSecurityPolicy: false,
-      crossOriginEmbedderPolicy: false,
+      contentSecurityPolicy: {
+        directives: {
+          "default-src": ["'self'"],
+          "script-src": ["'self'"],
+          "style-src": ["'self'", "https:"],
+          "img-src": ["'self'", "data:", "https:"],
+          "connect-src": ["'self'"],
+        },
+      },
+      crossOriginEmbedderPolicy: true,
     }),
   );
 
