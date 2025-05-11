@@ -58,10 +58,10 @@ describe('DomainRoutingMiddleware', () => {
     const req = {
       hostname: 'localhost',
       headers: {},
-      [ORGANIZATION_HEADER]: undefined
+      [ORGANIZATION_HEADER]: undefined,
     } as any;
     const res = {
-      setHeader: jest.fn()
+      setHeader: jest.fn(),
     } as any;
     const next = jest.fn();
 
@@ -75,7 +75,7 @@ describe('DomainRoutingMiddleware', () => {
     const req = {
       hostname: 'test.example.com',
       headers: {},
-      [ORGANIZATION_HEADER]: undefined
+      [ORGANIZATION_HEADER]: undefined,
     } as any;
     const res = {
       setHeader: jest.fn(),
