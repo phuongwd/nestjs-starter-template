@@ -31,7 +31,30 @@ describe('FingerprintService', () => {
     jest.spyOn(Date, 'now').mockImplementation(() => currentTime);
 
     mockConfigService = {
-      get: jest.fn().mockReturnValue('test-salt'),
+      get: jest.fn().mockImplementation((key: string) => {
+        if (key === 'JWT_SECRET') {
+          return 'test-salt';
+        }
+        if (key === 'AUTH_FINGERPRINT_MAX_ATTEMPTS') {
+          return 5;
+        }
+        if (key === 'AUTH_FINGERPRINT_RESET_AFTER') {
+          return 15 * 60 * 1000;
+        }
+        if (key === 'AUTH_FINGERPRINT_TIME_WINDOW') {
+          return 5 * 60 * 1000;
+        }
+        return undefined;
+      }),
+      getOrThrow: jest.fn().mockImplementation((key: string) => {
+        if (key === 'JWT_SECRET') {
+          return 'test-salt';
+        }
+        // If other keys were expected by getOrThrow in the service's constructor or methods under test:
+        // if (key === 'OTHER_CRITICAL_KEY') return 'some-value';
+        // Otherwise, mimic getOrThrow's behavior for unhandled keys:
+        throw new Error(`Missing config key in mock: ${key}`);
+      }),
     } as any;
 
     const module: TestingModule = await Test.createTestingModule({

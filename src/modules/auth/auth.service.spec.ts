@@ -104,11 +104,12 @@ describe('AuthService', () => {
         {
           provide: TokenService,
           useValue: {
-            generateToken: jest.fn().mockResolvedValue('test-token'),
             validateToken: jest.fn().mockResolvedValue(true),
-            getCurrentTokenVersion: jest.fn().mockReturnValue(1),
-            revokeToken: jest.fn(),
-            clearTokens: jest.fn(),
+            getCurrentTokenVersion: jest.fn().mockResolvedValue(1),
+            revokeToken: jest.fn().mockResolvedValue(undefined),
+            revokeAllUserTokens: jest.fn().mockResolvedValue(undefined),
+            clearTokens: jest.fn().mockResolvedValue(undefined),
+            trackUserTokens: jest.fn().mockResolvedValue(undefined),
           },
         },
         {
