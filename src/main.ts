@@ -122,7 +122,7 @@ async function bootstrap(): Promise<void> {
       contentSecurityPolicy: {
         directives: {
           "default-src": ["'self'"],
-          "script-src": ["'self'", "example.com"],
+          "script-src": ["'self'"],
           "style-src": ["'self'", "https:"],
           "img-src": ["'self'", "data:", "https:"],
           "connect-src": ["'self'"],
