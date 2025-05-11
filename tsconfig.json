@@ -24,6 +24,7 @@
     "noImplicitThis": true,
     "alwaysStrict": true,
     "esModuleInterop": true,
+    "moduleResolution": "node",
     "paths": {
       "@/*": [
         "src/*"

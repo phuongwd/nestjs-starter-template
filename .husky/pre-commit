@@ -7,7 +7,7 @@ npm run type-check
 # Run module dependency check
 # ts-node src/utils/module-checker.ts
 
-# Run linting
+# Run linting 
 npm run lint
 
 # Run tests

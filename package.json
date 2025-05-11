@@ -15,7 +15,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "type-check": "tsc --noEmit",
-    "lint": "eslint --fix --cache --cache-location ./node_modules/.cache/.eslintcache && yarn type-check",
+    "lint": "eslint --fix --cache --cache-location ./node_modules/.cache/.eslintcache 'src/**/*.{js,jsx,ts,tsx}' && yarn type-check",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
@@ -25,10 +25,10 @@
     "prepare": "[ \"$NODE_ENV\" != \"production\" ] && npx husky install || exit 0"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx}": [
+    "*src/**/*.{js,jsx,ts,tsx}": [
       "eslint --fix --cache --cache-location ./node_modules/.cache/.eslintcache"
     ],
-    "*.{ts,tsx}": [
+    "*src/**/*.{ts,tsx}": [
       "npm run type-check"
     ]
   },
