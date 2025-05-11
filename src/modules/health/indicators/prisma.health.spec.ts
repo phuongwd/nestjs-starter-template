@@ -23,8 +23,10 @@ describe('PrismaHealthIndicator', () => {
   beforeEach(async () => {
     // Reset mock implementations
     mockSocket.connect.mockImplementation((_port, _host, callback) => {
-      // Simulate successful connection
-      if (callback) callback();
+      // Simulate successful connection after a short delay to be more realistic
+      setTimeout(() => {
+        if (callback) callback();
+      }, 10);
       return mockSocket;
     });
     mockSocket.on.mockImplementation((_event, _callback) => mockSocket);
@@ -108,6 +110,19 @@ describe('PrismaHealthIndicator', () => {
       );
       expect(mockSocket.connect).toHaveBeenCalled();
       expect(mockSocket.on).toHaveBeenCalledWith('error', expect.any(Function));
+    });
+
+    it('should use cached result within check interval', async () => {
+      // Arrange
+      jest.spyOn(prismaService, '$executeRaw').mockResolvedValue(1);
+
+      // Act
+      const firstResult = await indicator.isHealthy('database');
+      const secondResult = await indicator.isHealthy('database');
+
+      // Assert
+      expect(prismaService.$executeRaw).toHaveBeenCalledTimes(1); // Should only query once
+      expect(secondResult).toEqual(firstResult);
     });
   });
 });

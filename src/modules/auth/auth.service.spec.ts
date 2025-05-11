@@ -106,6 +106,9 @@ describe('AuthService', () => {
           useValue: {
             generateToken: jest.fn().mockResolvedValue('test-token'),
             validateToken: jest.fn().mockResolvedValue(true),
+            getCurrentTokenVersion: jest.fn().mockReturnValue(1),
+            revokeToken: jest.fn(),
+            clearTokens: jest.fn(),
           },
         },
         {

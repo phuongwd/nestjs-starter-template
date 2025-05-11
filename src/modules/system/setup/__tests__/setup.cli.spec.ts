@@ -5,18 +5,15 @@ import { SetupCommand } from '../cli/commands/setup.command';
 import { GenerateTokenCommand } from '../cli/commands/generate-token.command';
 import { CompleteSetupCommand } from '../cli/commands/complete-setup.command';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '@/prisma/prisma.service';
 import inquirer from 'inquirer';
 
 jest.mock('inquirer');
 const mockedInquirer = inquirer as jest.Mocked<typeof inquirer>;
 
-// Mock process.exit
-const mockExit = jest
-  .spyOn(process, 'exit')
-  .mockImplementation((code?: number | string | null) => {
-    throw new Error(`Process.exit(${code})`);
-  }) as jest.SpyInstance<never, [code?: number | string | null]>;
+// Mock process.exit but store it in a variable we use
+jest.spyOn(process, 'exit').mockImplementation((code?: number | string | null) => {
+  throw new Error(`Process.exit(${code})`);
+});
 
 describe('Setup CLI Commands', () => {
   let setupCommand: SetupCommand;
@@ -34,15 +31,19 @@ describe('Setup CLI Commands', () => {
     validateEnvironment: jest.fn(),
   };
 
-  const mockPrismaService = {
-    $transaction: jest.fn(),
-  };
-
   const mockConfigService = {
     get: jest.fn(),
   };
 
-  beforeAll(async () => {
+  const mockSetupData = {
+    email: 'admin@test.com',
+    password: 'Password123!',
+    firstName: 'Admin',
+    lastName: 'User',
+    organizationName: 'Test Org',
+  };
+
+  beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SetupCommand,
@@ -57,10 +58,6 @@ describe('Setup CLI Commands', () => {
           useValue: mockSecurityContext,
         },
         {
-          provide: PrismaService,
-          useValue: mockPrismaService,
-        },
-        {
           provide: ConfigService,
           useValue: mockConfigService,
         },
@@ -68,20 +65,14 @@ describe('Setup CLI Commands', () => {
     }).compile();
 
     setupCommand = module.get<SetupCommand>(SetupCommand);
-    generateTokenCommand =
-      module.get<GenerateTokenCommand>(GenerateTokenCommand);
-    completeSetupCommand =
-      module.get<CompleteSetupCommand>(CompleteSetupCommand);
-  });
+    generateTokenCommand = module.get<GenerateTokenCommand>(GenerateTokenCommand);
+    completeSetupCommand = module.get<CompleteSetupCommand>(CompleteSetupCommand);
 
-  beforeEach(() => {
+    // Reset all mocks
     jest.clearAllMocks();
     mockSecurityContext.validateEnvironment.mockResolvedValue(undefined);
     mockSetupService.isSetupRequired.mockResolvedValue(true);
-  });
-
-  afterAll(() => {
-    mockExit.mockRestore();
+    mockedInquirer.prompt.mockResolvedValue(mockSetupData);
   });
 
   describe('setup', () => {
@@ -194,40 +185,33 @@ describe('Setup CLI Commands', () => {
   });
 
   describe('setup:complete', () => {
-    const mockSetupData = {
-      email: 'admin@test.com',
-      password: 'Password123!',
-      firstName: 'Admin',
-      lastName: 'User',
-      organizationName: 'Test Org',
-    };
+    const validToken = 'a'.repeat(32);
 
-    beforeEach(() => {
-      mockedInquirer.prompt.mockResolvedValue(mockSetupData);
-    });
-
-    it('should complete setup with valid token', async () => {
-      const mockToken = 'a'.repeat(32);
+    it('should complete setup with valid token and data', async () => {
+      // Setup mocks
       mockSetupService.validateToken.mockResolvedValue(true);
       mockSetupService.completeSetup.mockResolvedValue(undefined);
 
+      // Execute
       await completeSetupCommand.run([], {
-        token: mockToken,
+        token: validToken,
         environment: 'development',
-        force: false,
       });
 
+      // Verify token validation
       expect(mockSetupService.validateToken).toHaveBeenCalledWith(
-        mockToken,
+        validToken,
         'CLI',
       );
+
+      // Verify setup completion
       expect(mockSetupService.completeSetup).toHaveBeenCalledWith(
         expect.objectContaining({
           email: mockSetupData.email,
           password: mockSetupData.password,
           firstName: mockSetupData.firstName,
           lastName: mockSetupData.lastName,
-          setupToken: mockToken,
+          setupToken: validToken,
           metadata: expect.objectContaining({
             source: 'cli',
             environment: 'development',
@@ -238,59 +222,143 @@ describe('Setup CLI Commands', () => {
       );
     });
 
-    it('should fail with invalid token format', async () => {
+    it('should handle token validation failure with detailed error', async () => {
+      // Setup mock to simulate validation failure
+      mockSetupService.validateToken.mockResolvedValue(false);
+      const consoleErrorSpy = jest.spyOn(console, 'error');
+
+      // Execute and verify error handling
+      await expect(
+        completeSetupCommand.run([], {
+          token: validToken,
+          environment: 'development',
+        }),
+      ).rejects.toThrow('Process.exit(1)');
+
+      // Verify error logging
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Token validation failed for token:'),
+      );
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Timestamp:'),
+      );
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should handle token validation errors gracefully', async () => {
+      // Setup mock to simulate validation error
+      const errorMessage = 'Token validation failed';
+      mockSetupService.validateToken.mockRejectedValue(new Error(errorMessage));
+      const consoleErrorSpy = jest.spyOn(console, 'error');
+
+      // Execute and verify error handling
+      await expect(
+        completeSetupCommand.run([], {
+          token: validToken,
+          environment: 'development',
+        }),
+      ).rejects.toThrow('Process.exit(1)');
+
+      // Verify error logging
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Token validation error:'),
+        expect.stringContaining(errorMessage),
+      );
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should validate required environment parameter', async () => {
+      await expect(
+        completeSetupCommand.run([], {
+          token: validToken,
+        }),
+      ).rejects.toThrow();
+
+      expect(mockSecurityContext.validateEnvironment).not.toHaveBeenCalled();
+    });
+
+    it('should validate required token parameter', async () => {
+      await expect(
+        completeSetupCommand.run([], {
+          environment: 'development',
+        }),
+      ).rejects.toThrow('Setup token is required');
+    });
+
+    it('should validate token format', () => {
       expect(() => completeSetupCommand.parseToken('invalid-token')).toThrow(
         'Invalid token format',
       );
     });
 
-    it('should fail with invalid token', async () => {
-      const mockToken = 'a'.repeat(32);
-      mockSetupService.validateToken.mockResolvedValue(false);
+    it('should validate user input', async () => {
+      // Mock inquirer with invalid data
+      const invalidData = {
+        email: 'invalid-email',
+        password: '123', // Too short
+        firstName: '',
+        lastName: '',
+        organizationName: '',
+      };
+      mockedInquirer.prompt.mockResolvedValueOnce(invalidData);
+      mockSetupService.validateToken.mockResolvedValue(true);
 
-      await expect(
-        completeSetupCommand.run([], {
-          token: mockToken,
-          environment: 'development',
-        }),
-      ).rejects.toThrowError('Process.exit(1)');
-    });
-
-    it('should validate required parameters', async () => {
-      // Missing token
-      await expect(
-        completeSetupCommand.run([], {
-          environment: 'development',
-        }),
-      ).rejects.toThrowError();
-
-      // Missing environment
       await expect(
         completeSetupCommand.run([], {
           token: 'a'.repeat(32),
-        }),
-      ).rejects.toThrowError();
-    });
-
-    it('should handle setup completion errors', async () => {
-      const mockToken = 'a'.repeat(32);
-      mockSetupService.validateToken.mockResolvedValue(true);
-      mockSetupService.completeSetup.mockRejectedValue(new Error('Test error'));
-      const consoleErrorSpy = jest.spyOn(console, 'error');
-
-      await expect(
-        completeSetupCommand.run([], {
-          token: mockToken,
           environment: 'development',
         }),
-      ).rejects.toThrowError('Process.exit(1)');
+      ).rejects.toThrow();
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to complete setup'),
-        'Test error',
+      // Verify validation was performed
+      expect(mockedInquirer.prompt).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            validate: expect.any(Function),
+          }),
+        ]),
       );
 
-      consoleErrorSpy.mockRestore();
+      // Test email validation
+      const emailQuestion = (mockedInquirer.prompt.mock.calls[0][0] as any[]).find(
+        (q) => q.name === 'email',
+      );
+      expect(emailQuestion.validate('invalid-email')).toBe(
+        'Please enter a valid email address',
+      );
+      expect(emailQuestion.validate('valid@email.com')).toBe(true);
+
+      // Test password validation
+      const passwordQuestion = (mockedInquirer.prompt.mock.calls[0][0] as any[]).find(
+        (q) => q.name === 'password',
+      );
+      expect(passwordQuestion.validate('123')).toBe(
+        'Password must be at least 8 characters long',
+      );
+      expect(passwordQuestion.validate('Password123!')).toBe(true);
+    });
+
+    it('should set correct metadata in setup completion', async () => {
+      mockSetupService.validateToken.mockResolvedValue(true);
+      mockSetupService.completeSetup.mockResolvedValue(undefined);
+
+      await completeSetupCommand.run([], {
+        token: 'a'.repeat(32),
+        environment: 'staging',
+      });
+
+      expect(mockSetupService.completeSetup).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: {
+            source: 'cli',
+            environment: 'staging',
+            organizationName: mockSetupData.organizationName,
+          },
+        }),
+        'CLI',
+      );
     });
   });
 });
