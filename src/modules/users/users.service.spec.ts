@@ -138,6 +138,7 @@ describe('UsersService', () => {
         firstName: createUserDto.firstName,
         lastName: createUserDto.lastName,
         password: 'hashedPassword',
+        systemRoles: [],
       };
 
       jest
@@ -170,6 +171,7 @@ describe('UsersService', () => {
         },
         include: {
           organizationMembers: true,
+          systemRoles: true,
         },
       });
       expect(result).toEqual(expect.objectContaining(mockUserWithoutPassword));
@@ -191,6 +193,7 @@ describe('UsersService', () => {
         firstName: updateUserDto.firstName ?? mockUser.firstName,
         lastName: updateUserDto.lastName ?? mockUser.lastName,
         password: 'newHashedPassword',
+        systemRoles: [],
       };
 
       jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockUser);
@@ -215,6 +218,7 @@ describe('UsersService', () => {
         },
         include: {
           organizationMembers: true,
+          systemRoles: true,
         },
       });
       expect(result).toEqual(

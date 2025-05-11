@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { MailerModule } from '@nestjs-modules/mailer';
+import { MailerModule, MailerOptions } from '@nestjs-modules/mailer';
 import { ConfigService } from '@nestjs/config';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 import { join } from 'path';
@@ -31,9 +31,21 @@ const DEFAULT_EMAIL_CONFIG: EmailConfig = {
   imports: [
     MailerModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService): Partial<EmailConfig> => {
-        const isDevelopment =
-          configService.get<string>('NODE_ENV') === 'development';
+      useFactory: (configService: ConfigService): MailerOptions => {
+        const nodeEnv = configService.get<string>('NODE_ENV');
+        const isDevelopment = nodeEnv === 'development';
+        const isTest = nodeEnv === 'test';
+
+        if (isTest) {
+          return {
+            transport: { jsonTransport: true },
+            defaults: {
+              from: 'noreply@test.com',
+            },
+            template: DEFAULT_EMAIL_CONFIG.template,
+          } as MailerOptions;
+        }
+
         const features = configService.get<FeatureFlagsConfig>('features');
 
         // If email is disabled or features not configured, return minimal config
@@ -64,7 +76,7 @@ const DEFAULT_EMAIL_CONFIG: EmailConfig = {
             from: getConfig<string>('SMTP_FROM', 'test@example.com'),
           },
           template: DEFAULT_EMAIL_CONFIG.template,
-        };
+        } as MailerOptions;
       },
     }),
   ],

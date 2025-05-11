@@ -19,6 +19,10 @@ import { FingerprintService } from './services/fingerprint.service';
 import { OAuthStateService } from './oauth/services/oauth-state.service';
 import { OAUTH_INJECTION_TOKENS } from './oauth/constants/injection-tokens';
 import { IOAuthUserRepository } from './oauth/interfaces/oauth-user-repository.interface';
+import {
+  UserWithoutPasswordResponse,
+  UserWithoutPassword,
+} from '../users/types/user.type';
 
 describe('AuthService', () => {
   let authService: AuthService;
@@ -104,11 +108,12 @@ describe('AuthService', () => {
         {
           provide: TokenService,
           useValue: {
-            generateToken: jest.fn().mockResolvedValue('test-token'),
             validateToken: jest.fn().mockResolvedValue(true),
-            getCurrentTokenVersion: jest.fn().mockReturnValue(1),
-            revokeToken: jest.fn(),
-            clearTokens: jest.fn(),
+            getCurrentTokenVersion: jest.fn().mockResolvedValue(1),
+            revokeToken: jest.fn().mockResolvedValue(undefined),
+            revokeAllUserTokens: jest.fn().mockResolvedValue(undefined),
+            clearTokens: jest.fn().mockResolvedValue(undefined),
+            trackUserTokens: jest.fn().mockResolvedValue(undefined),
           },
         },
         {
@@ -159,7 +164,6 @@ describe('AuthService', () => {
       // Arrange
       jest.spyOn(usersService, 'findByEmail').mockResolvedValue(mockUser);
       jest.spyOn(passwordService, 'comparePasswords').mockResolvedValue(true);
-      jest.spyOn(tokenService, 'generateToken').mockResolvedValue('test-token');
 
       // Act
       const result = await authService.login(loginDto, mockRequest);
@@ -168,16 +172,12 @@ describe('AuthService', () => {
       expect(result).toEqual({
         accessToken: 'test-token',
         refreshToken: 'test-token',
-        user: expect.objectContaining(mockUserWithoutPassword),
+        user: new UserWithoutPasswordResponse(mockUserWithoutPassword),
       });
       expect(usersService.findByEmail).toHaveBeenCalledWith(loginDto.email);
       expect(passwordService.comparePasswords).toHaveBeenCalledWith(
         loginDto.password,
         mockUser.password,
-      );
-      expect(tokenService.generateToken).toHaveBeenCalledWith(
-        mockUser.id,
-        mockRequest,
       );
     });
 
@@ -256,10 +256,11 @@ describe('AuthService', () => {
 
     it('should create new user and return tokens', async () => {
       // Arrange
+      const registeredUser = { ...mockUser, ...createUserDto };
       jest.spyOn(usersService, 'findByEmail').mockResolvedValue(null);
       jest
         .spyOn(usersService, 'create')
-        .mockResolvedValue(mockUserWithoutPassword);
+        .mockResolvedValue(registeredUser as UserWithoutPassword);
 
       // Act
       const result = await authService.register(createUserDto, mockRequest);
@@ -268,7 +269,7 @@ describe('AuthService', () => {
       expect(result).toEqual({
         accessToken: 'test-token',
         refreshToken: 'test-token',
-        user: expect.objectContaining(mockUserWithoutPassword),
+        user: new UserWithoutPasswordResponse(registeredUser),
       });
       expect(usersService.findByEmail).toHaveBeenCalledWith(
         createUserDto.email,

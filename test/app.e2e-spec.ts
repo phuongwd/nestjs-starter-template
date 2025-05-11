@@ -15,10 +15,17 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
-  it('/ (GET)', () => {
+  it('GET / should return 401 if system is already set up', () => {
     return request(app.getHttpServer())
       .get('/')
-      .expect(200)
-      .expect('Hello World!');
+      .expect(401)
+      .then((response) => {
+        expect(response.body).toHaveProperty('statusCode', 401);
+        // Add checks for timestamp and path if they are consistent, or use expect.any(String)
+        expect(response.body).toHaveProperty(
+          'message',
+          'System is already set up',
+        );
+      });
   });
 });
