@@ -2,6 +2,8 @@ import {
   Injectable,
   UnauthorizedException,
   BadRequestException,
+  InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
@@ -16,6 +18,7 @@ import { SetupCompletionData } from '../interfaces/setup-service.interface';
 import { PrismaService } from '@/prisma/prisma.service';
 import { PasswordService } from '@/modules/users/services/password.service';
 import { SetupToken, Prisma } from '@prisma/client';
+import { PASSWORD_REGEX } from '@/modules/users/constants/user.constants';
 
 /**
  * Setup service implementation
@@ -23,6 +26,8 @@ import { SetupToken, Prisma } from '@prisma/client';
  */
 @Injectable()
 export class SetupService implements ISetupService {
+  private readonly logger = new Logger(SetupService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
@@ -90,10 +95,47 @@ export class SetupService implements ISetupService {
 
     try {
       await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        // Hash the password before storing
-        const hashedPassword = await this.passwordService.hashPassword(
-          data.password,
-        );
+        let hashedPassword: string;
+        try {
+          hashedPassword = await this.passwordService.hashPassword(
+            data.password,
+          );
+        } catch (error) {
+          const diagnosticMetadata = {
+            passwordLength: data.password.length,
+            hasSpecialChars: PASSWORD_REGEX.test(data.password),
+            hasNumbers: /\d/.test(data.password),
+            hasUpperCase: /[A-Z]/.test(data.password),
+            hasLowerCase: /[a-z]/.test(data.password),
+            errorType:
+              error instanceof Error ? error.constructor.name : 'Unknown',
+            errorMessage:
+              error instanceof Error ? error.message : 'Unknown error',
+            environment: this.configService.get('NODE_ENV'),
+            timestamp: new Date().toISOString(),
+          };
+
+          this.logger.error('Password hashing failed during setup', {
+            ...diagnosticMetadata,
+            tokenId: token.id,
+            ip,
+          });
+
+          await this.setupTokenRepository.createAuditEntry(
+            {
+              tokenId: token.id,
+              action: SetupAuditAction.SETUP_FAILED,
+              ip,
+              success: false,
+              error: 'Password hashing failed',
+              metadata: diagnosticMetadata,
+            },
+            tx,
+          );
+          throw new InternalServerErrorException(
+            'Failed to process password. Please try again.',
+          );
+        }
 
         // Create admin user
         const user = await tx.user.create({
