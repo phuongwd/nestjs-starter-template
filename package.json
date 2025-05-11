@@ -14,7 +14,7 @@
     "generate:ssl": "./scripts/generate-ssl-certs.sh",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "type-check": "tsc --noEmit",
+    "type-check": "sh -c 'tsc --noEmit -p tsconfig.json'",
     "lint": "eslint --fix --cache --cache-location ./node_modules/.cache/.eslintcache 'src/**/*.{js,jsx,ts,tsx}' && yarn type-check",
     "test": "jest",
     "test:watch": "jest --watch",
