@@ -44,12 +44,21 @@ export interface ISetupTokenRepository {
    * Mark a token as used
    * @param id Token ID
    * @param usedByIp IP address that used the token
+   * @param tx Optional Prisma transaction client
    */
-  markAsUsed(id: string, usedByIp: string): Promise<SetupToken>;
+  markAsUsed(
+    id: string,
+    usedByIp: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<SetupToken>;
 
   /**
    * Create an audit entry for a token
    * @param data Audit entry data
+   * @param tx Optional Prisma transaction client
    */
-  createAuditEntry(data: CreateSetupAuditData): Promise<SetupAudit>;
+  createAuditEntry(
+    data: CreateSetupAuditData,
+    tx?: Prisma.TransactionClient,
+  ): Promise<SetupAudit>;
 }

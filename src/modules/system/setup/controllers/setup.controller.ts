@@ -15,12 +15,11 @@ import { SETUP_TOKENS } from '../constants/setup.constants';
 import { Inject } from '@nestjs/common';
 import { SetupRateLimitGuard } from '../guards/setup-rate-limit.guard';
 import { SetupValidationPipe } from '../pipes/setup-validation.pipe';
-import { SetupSecurityGuard } from '@/modules/system/setup/guards/setup-security.guard';
+import { SetupSecurityGuard } from '../guards/setup-security.guard';
 
 @ApiTags('System Setup')
 @Controller('setup')
-@UseGuards(SetupSecurityGuard)
-@UseGuards(SetupRateLimitGuard)
+@UseGuards(SetupRateLimitGuard, SetupSecurityGuard)
 export class SetupController {
   constructor(
     @Inject(SETUP_TOKENS.SERVICE.SETUP)

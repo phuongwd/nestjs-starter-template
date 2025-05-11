@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PrismaModule } from '@/prisma/prisma.module';
 import { SystemInitService } from './system-init.service';
 import { SetupService } from './setup/services/setup.service';
@@ -11,9 +11,9 @@ import { SecurityContextService } from './setup/services/security-context.servic
 import { SetupAuditInterceptor } from './setup/interceptors/setup-audit.interceptor';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { PrismaService } from '@/prisma/prisma.service';
-import { ConfigService } from '@nestjs/config';
 import { ISetupTokenRepository } from './setup/interfaces/setup-token.interface';
 import { PasswordService } from '@/modules/users/services/password.service';
+import { UsersModule } from '@/modules/users/users.module';
 
 /**
  * System Module
@@ -23,6 +23,7 @@ import { PasswordService } from '@/modules/users/services/password.service';
   imports: [
     ConfigModule,
     PrismaModule,
+    UsersModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60,
@@ -45,14 +46,15 @@ import { PasswordService } from '@/modules/users/services/password.service';
         prisma: PrismaService,
         config: ConfigService,
         repository: ISetupTokenRepository,
-        pwService: PasswordService,
+        passwordService: PasswordService,
       ) => {
-        return new SetupService(prisma, config, repository, pwService);
+        return new SetupService(prisma, config, repository, passwordService);
       },
       inject: [
         PrismaService,
         ConfigService,
         SETUP_TOKENS.REPOSITORY.SETUP_TOKEN,
+        PasswordService,
       ],
     },
     {
