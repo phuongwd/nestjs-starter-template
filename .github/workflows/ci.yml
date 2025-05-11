@@ -47,6 +47,7 @@ jobs:
       API_PREFIX: api/v
       API_VERSION: 1
       LOG_LEVEL: info
+      SETUP_TOKEN: ${{ secrets.SETUP_TOKEN }}
 
     steps:
       - name: ':inbox_tray: Checkout Repository'
