@@ -53,27 +53,36 @@ export class SetupTokenRepository implements ISetupTokenRepository {
    * Mark a token as used
    * @param id Token ID
    * @param usedByIp IP address that used the token
+   * @param tx Optional Prisma transaction client
    */
-  async markAsUsed(id: string, usedByIp: string): Promise<SetupToken> {
+  async markAsUsed(
+    id: string,
+    usedByIp: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<SetupToken> {
     const updateData: Prisma.SetupTokenUpdateInput = {
       isUsed: true,
       usedAt: new Date(),
       usedByIp,
     };
 
-    return this.prisma.$transaction(async (tx) => {
-      return tx.setupToken.update({
-        where: { id },
-        data: updateData,
-      });
+    // Use the provided transaction client if available, otherwise use the main prisma client
+    const client = tx || this.prisma;
+    return client.setupToken.update({
+      where: { id },
+      data: updateData,
     });
   }
 
   /**
    * Create an audit entry for a token
    * @param data Audit entry data
+   * @param tx Optional Prisma transaction client
    */
-  async createAuditEntry(data: CreateSetupAuditData): Promise<SetupAudit> {
+  async createAuditEntry(
+    data: CreateSetupAuditData,
+    tx?: Prisma.TransactionClient,
+  ): Promise<SetupAudit> {
     const createData: Prisma.SetupAuditCreateInput = {
       token: { connect: { id: data.tokenId } },
       action: data.action,
@@ -84,10 +93,10 @@ export class SetupTokenRepository implements ISetupTokenRepository {
       timestamp: new Date(),
     };
 
-    return this.prisma.$transaction(async (tx) => {
-      return tx.setupAudit.create({
-        data: createData,
-      });
+    // Use the provided transaction client if available, otherwise use the main prisma client
+    const client = tx || this.prisma;
+    return client.setupAudit.create({
+      data: createData,
     });
   }
 }
