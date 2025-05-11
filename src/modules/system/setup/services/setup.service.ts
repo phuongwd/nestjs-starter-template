@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   BadRequestException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
@@ -90,10 +91,30 @@ export class SetupService implements ISetupService {
 
     try {
       await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        // Hash the password before storing
-        const hashedPassword = await this.passwordService.hashPassword(
-          data.password,
-        );
+        let hashedPassword: string;
+        try {
+          hashedPassword = await this.passwordService.hashPassword(
+            data.password,
+          );
+        } catch (error) {
+          console.error('Password hashing failed:', error);
+          await this.setupTokenRepository.createAuditEntry(
+            {
+              tokenId: token.id,
+              action: SetupAuditAction.SETUP_FAILED,
+              ip,
+              success: false,
+              error: 'Password hashing failed',
+              metadata: {
+                error: error instanceof Error ? error.message : 'Unknown error',
+              },
+            },
+            tx,
+          );
+          throw new InternalServerErrorException(
+            'Failed to process password. Please try again.',
+          );
+        }
 
         // Create admin user
         const user = await tx.user.create({
