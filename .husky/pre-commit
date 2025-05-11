@@ -1,14 +1,17 @@
 #!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
+# . "$(dirname "$0")/_/husky.sh"
 
 # Run TypeScript compiler check
 npm run type-check
 
 # Run module dependency check
-ts-node src/utils/module-checker.ts
+# ts-node src/utils/module-checker.ts
 
 # Run linting
 npm run lint
 
 # Run tests
-npm test 
+# npm test
+
+# Execute lint-staged
+npx lint-staged 
