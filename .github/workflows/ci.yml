@@ -47,6 +47,8 @@ jobs:
       API_PREFIX: api/v
       API_VERSION: 1
       LOG_LEVEL: info
+      FEATURE_EMAIL_ENABLED: false
+      DEPLOYMENT_TYPE: cloud
       SETUP_TOKEN: ${{ secrets.SETUP_TOKEN }}
 
     steps:
@@ -75,7 +77,9 @@ jobs:
         run: npm run test -- --coverage
 
       - name: ':rocket: Run E2E Tests'
-        run: npm run test:e2e
+        run: |
+          # Set a timeout for the E2E tests
+          timeout 60s npm run test:e2e || (echo "E2E tests timed out after 60 seconds" && exit 1)
 
       - name: ':package: Build Application'
         run: npm run build
