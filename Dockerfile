@@ -55,7 +55,7 @@ COPY --chown=node:node . .
 # Set default environment variables
 ENV NODE_ENV=development \
     PORT=3001 \
-    NODE_OPTIONS="--max-old-space-size=512"
+    NODE_OPTIONS="--max-old-space-size=4028"
 
 # Generate Prisma client
 RUN npx prisma generate
@@ -90,7 +90,7 @@ COPY --from=builder --chown=node:node /app/node_modules/.prisma ./node_modules/.
 # Set environment variables
 ENV NODE_ENV=production \
     PORT=3000 \
-    NODE_OPTIONS="--max-old-space-size=512"
+    NODE_OPTIONS="--max-old-space-size=4028"
 
 # Ensure proper permissions for storage directories
 RUN mkdir -p /app/storage /app/tmp /app/uploads && \
@@ -102,7 +102,7 @@ USER node
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=30s \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/v1/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/v1/health || exit 1
 
 # Use dumb-init as PID 1 to handle signals properly
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]

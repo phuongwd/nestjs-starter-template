@@ -12,8 +12,8 @@ import { SetupAuditInterceptor } from './setup/interceptors/setup-audit.intercep
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { PrismaService } from '@/prisma/prisma.service';
 import { ISetupTokenRepository } from './setup/interfaces/setup-token.interface';
-import { UsersModule } from '@/modules/users/users.module';
 import { PasswordService } from '@/modules/users/services/password.service';
+import { UsersModule } from '@/modules/users/users.module';
 
 /**
  * System Module

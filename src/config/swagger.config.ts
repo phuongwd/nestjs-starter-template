@@ -74,5 +74,6 @@ export function setupSwagger(
       docExpansion: 'none',
     },
     customSiteTitle: 'API Documentation',
+    swaggerUrl: '/swagger/json',
   });
 }
