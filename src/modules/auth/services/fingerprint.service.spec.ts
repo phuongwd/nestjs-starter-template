@@ -9,7 +9,7 @@ import { ConfigService } from '@nestjs/config';
 
 describe('FingerprintService', () => {
   let service: FingerprintService;
-  let mockConfigService: ConfigService;
+  let mockConfigService: Partial<jest.Mocked<ConfigService>>;
   let currentTime: number;
 
   // Mock request factory
@@ -31,7 +31,7 @@ describe('FingerprintService', () => {
     jest.spyOn(Date, 'now').mockImplementation(() => currentTime);
 
     mockConfigService = {
-      get: jest.fn().mockImplementation((key: string) => {
+      get: jest.fn().mockImplementation((key: string, defaultValue?: any) => {
         if (key === 'JWT_SECRET') {
           return 'test-salt';
         }
@@ -44,18 +44,23 @@ describe('FingerprintService', () => {
         if (key === 'AUTH_FINGERPRINT_TIME_WINDOW') {
           return 5 * 60 * 1000;
         }
-        return undefined;
+        return defaultValue;
       }),
-      getOrThrow: jest.fn().mockImplementation((key: string) => {
-        if (key === 'JWT_SECRET') {
-          return 'test-salt';
-        }
-        // If other keys were expected by getOrThrow in the service's constructor or methods under test:
-        // if (key === 'OTHER_CRITICAL_KEY') return 'some-value';
-        // Otherwise, mimic getOrThrow's behavior for unhandled keys:
-        throw new Error(`Missing config key in mock: ${key}`);
-      }),
-    } as any;
+      getOrThrow: jest
+        .fn()
+        .mockImplementation((key: string, defaultValue?: any) => {
+          if (key === 'JWT_SECRET') {
+            return 'test-salt';
+          }
+          const value = mockConfigService.get!(key, defaultValue);
+          if (value === undefined && defaultValue === undefined) {
+            throw new Error(
+              `Test Error: Config key '${key}' not found and no default was provided to getOrThrow.`,
+            );
+          }
+          return value;
+        }),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -139,24 +144,34 @@ describe('FingerprintService', () => {
     });
 
     it('should use salt in fingerprint generation', () => {
-      mockConfigService.get = jest
-        .fn()
-        .mockReturnValueOnce('salt1')
-        .mockReturnValueOnce('salt2');
-      // Ensure getOrThrow also uses the sequenced values for JWT_SECRET for this specific test
-      mockConfigService.getOrThrow = jest
-        .fn()
-        .mockImplementationOnce((key: string) => {
-          if (key === 'JWT_SECRET') return 'salt1';
-          throw new Error(`Unexpected key in getOrThrow mock: ${key}`);
-        })
-        .mockImplementationOnce((key: string) => {
-          if (key === 'JWT_SECRET') return 'salt2';
-          throw new Error(`Unexpected key in getOrThrow mock: ${key}`);
-        });
+      // Specific setup for this test to provide different salts
+      // First service instance
+      mockConfigService.get!.mockImplementationOnce((key: string) =>
+        key === 'JWT_SECRET' ? 'salt1' : undefined,
+      );
+      mockConfigService.getOrThrow!.mockImplementationOnce((key: string) => {
+        if (key === 'JWT_SECRET') return 'salt1';
+        throw new Error(
+          `Unexpected key in getOrThrow mock for service1: ${key}`,
+        );
+      });
+      const service1 = new FingerprintService(
+        mockConfigService as any as ConfigService,
+      );
 
-      const service1 = new FingerprintService(mockConfigService);
-      const service2 = new FingerprintService(mockConfigService);
+      // Second service instance
+      mockConfigService.get!.mockImplementationOnce((key: string) =>
+        key === 'JWT_SECRET' ? 'salt2' : undefined,
+      );
+      mockConfigService.getOrThrow!.mockImplementationOnce((key: string) => {
+        if (key === 'JWT_SECRET') return 'salt2';
+        throw new Error(
+          `Unexpected key in getOrThrow mock for service2: ${key}`,
+        );
+      });
+      const service2 = new FingerprintService(
+        mockConfigService as any as ConfigService,
+      );
 
       const req = createMockRequest() as Request;
       const fingerprint1 = service1.generateFingerprint(req);
