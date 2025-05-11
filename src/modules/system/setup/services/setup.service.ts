@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
-import { SetupToken } from '@prisma/client';
 import { ISetupService } from '../interfaces/setup-service.interface';
 import { ISetupTokenRepository } from '../interfaces/setup-token.interface';
 import {
@@ -15,6 +14,8 @@ import {
 } from '../constants/setup.constants';
 import { SetupCompletionData } from '../interfaces/setup-service.interface';
 import { PrismaService } from '@/prisma/prisma.service';
+import { PasswordService } from '@/modules/users/services/password.service';
+import { SetupToken, Prisma } from '@prisma/client';
 
 /**
  * Setup service implementation
@@ -26,6 +27,7 @@ export class SetupService implements ISetupService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly setupTokenRepository: ISetupTokenRepository,
+    private readonly passwordService: PasswordService,
   ) {}
 
   /**
@@ -87,12 +89,17 @@ export class SetupService implements ISetupService {
     });
 
     try {
-      await this.prisma.$transaction(async (tx) => {
+      await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        // Hash the password before storing
+        const hashedPassword = await this.passwordService.hashPassword(
+          data.password,
+        );
+
         // Create admin user
         const user = await tx.user.create({
           data: {
             email: data.email,
-            password: data.password, // Note: Should be hashed by auth service
+            password: hashedPassword,
             firstName: data.firstName,
             lastName: data.lastName,
           },
@@ -103,23 +110,26 @@ export class SetupService implements ISetupService {
           data: {
             name: 'SYSTEM_ADMIN',
             description: 'System Administrator',
-            permissions: ['*'], // All permissions
+            permissions: ['*'],
             users: {
               connect: { id: user.id },
             },
           },
         });
 
-        // Mark token as used
-        await this.setupTokenRepository.markAsUsed(token.id, ip);
+        // Pass the transaction client 'tx' to the repository methods
+        await this.setupTokenRepository.markAsUsed(token.id, ip, tx);
 
-        await this.setupTokenRepository.createAuditEntry({
-          tokenId: token.id,
-          action: SetupAuditAction.SETUP_COMPLETED,
-          ip,
-          success: true,
-          metadata: { userId: user.id },
-        });
+        await this.setupTokenRepository.createAuditEntry(
+          {
+            tokenId: token.id,
+            action: SetupAuditAction.SETUP_COMPLETED,
+            ip,
+            success: true,
+            metadata: { userId: user.id },
+          },
+          tx,
+        );
       });
     } catch (error: unknown) {
       await this.setupTokenRepository.createAuditEntry({

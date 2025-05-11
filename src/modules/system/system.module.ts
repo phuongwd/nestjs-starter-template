@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PrismaModule } from '@/prisma/prisma.module';
 import { SystemInitService } from './system-init.service';
 import { SetupService } from './setup/services/setup.service';
@@ -8,12 +8,12 @@ import { SetupController } from './setup/controllers/setup.controller';
 import { SETUP_TOKENS } from './setup/constants/setup.constants';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { SecurityContextService } from './setup/services/security-context.service';
-import { SetupSecurityGuard } from './setup/guards/setup-security.guard';
 import { SetupAuditInterceptor } from './setup/interceptors/setup-audit.interceptor';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { PrismaService } from '@/prisma/prisma.service';
-import { ConfigService } from '@nestjs/config';
 import { ISetupTokenRepository } from './setup/interfaces/setup-token.interface';
+import { UsersModule } from '@/modules/users/users.module';
+import { PasswordService } from '@/modules/users/services/password.service';
 
 /**
  * System Module
@@ -23,6 +23,7 @@ import { ISetupTokenRepository } from './setup/interfaces/setup-token.interface'
   imports: [
     ConfigModule,
     PrismaModule,
+    UsersModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60,
@@ -45,18 +46,16 @@ import { ISetupTokenRepository } from './setup/interfaces/setup-token.interface'
         prisma: PrismaService,
         config: ConfigService,
         repository: ISetupTokenRepository,
+        passwordService: PasswordService,
       ) => {
-        return new SetupService(prisma, config, repository);
+        return new SetupService(prisma, config, repository, passwordService);
       },
       inject: [
         PrismaService,
         ConfigService,
         SETUP_TOKENS.REPOSITORY.SETUP_TOKEN,
+        PasswordService,
       ],
-    },
-    {
-      provide: APP_GUARD,
-      useClass: SetupSecurityGuard,
     },
     {
       provide: APP_INTERCEPTOR,

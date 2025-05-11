@@ -13,6 +13,7 @@ import {
 } from '@prisma/client';
 import { ISetupTokenRepository } from '../interfaces/setup-token.interface';
 import { SETUP_TOKENS } from '../constants/setup.constants';
+import { PasswordService } from '@/modules/users/services/password.service';
 
 describe('SetupService', () => {
   let service: SetupService;
@@ -52,6 +53,11 @@ describe('SetupService', () => {
     get: jest.fn(),
   };
 
+  const mockPasswordService: jest.Mocked<PasswordService> = {
+    hashPassword: jest.fn(),
+    comparePasswords: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -68,16 +74,22 @@ describe('SetupService', () => {
           useValue: mockConfigService,
         },
         {
+          provide: PasswordService,
+          useValue: mockPasswordService,
+        },
+        {
           provide: SetupService,
           useFactory: (
             prisma: PrismaService,
             config: ConfigService,
             repository: ISetupTokenRepository,
-          ) => new SetupService(prisma, config, repository),
+            passwordService: PasswordService,
+          ) => new SetupService(prisma, config, repository, passwordService),
           inject: [
             PrismaService,
             ConfigService,
             SETUP_TOKENS.REPOSITORY.SETUP_TOKEN,
+            PasswordService,
           ],
         },
       ],
@@ -87,6 +99,7 @@ describe('SetupService', () => {
 
     // Reset all mocks before each test
     jest.clearAllMocks();
+    mockPasswordService.hashPassword.mockClear();
   });
 
   describe('generateToken', () => {
@@ -148,6 +161,8 @@ describe('SetupService', () => {
       metadata: { source: 'test' },
     };
 
+    const mockHashedPassword = 'hashedPassword123';
+
     const mockToken: SetupToken = {
       id: '1',
       token: mockSetupData.setupToken,
@@ -165,7 +180,7 @@ describe('SetupService', () => {
     const mockUser: User = {
       id: 1,
       email: mockSetupData.email,
-      password: mockSetupData.password,
+      password: mockHashedPassword,
       firstName: mockSetupData.firstName,
       lastName: mockSetupData.lastName,
       createdAt: new Date(),
@@ -186,8 +201,9 @@ describe('SetupService', () => {
       updatedAt: new Date(),
     };
 
-    it('should complete setup successfully', async () => {
+    it('should complete setup successfully and hash password', async () => {
       mockSetupTokenRepository.findByToken.mockResolvedValue(mockToken);
+      mockPasswordService.hashPassword.mockResolvedValue(mockHashedPassword);
       mockPrismaService.user.create.mockResolvedValue(mockUser);
       mockPrismaService.systemRole.create.mockResolvedValue(mockSystemRole);
       mockSetupTokenRepository.markAsUsed.mockResolvedValue({} as SetupToken);
@@ -197,13 +213,13 @@ describe('SetupService', () => {
 
       await service.completeSetup(mockSetupData, mockIp);
 
-      expect(mockSetupTokenRepository.findByToken).toHaveBeenCalledWith(
-        mockSetupData.setupToken,
+      expect(mockPasswordService.hashPassword).toHaveBeenCalledWith(
+        mockSetupData.password,
       );
       expect(mockPrismaService.user.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           email: mockSetupData.email,
-          password: mockSetupData.password,
+          password: mockHashedPassword,
           firstName: mockSetupData.firstName,
           lastName: mockSetupData.lastName,
         }),
