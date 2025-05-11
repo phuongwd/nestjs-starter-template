@@ -143,6 +143,18 @@ describe('FingerprintService', () => {
         .fn()
         .mockReturnValueOnce('salt1')
         .mockReturnValueOnce('salt2');
+      // Ensure getOrThrow also uses the sequenced values for JWT_SECRET for this specific test
+      mockConfigService.getOrThrow = jest
+        .fn()
+        .mockImplementationOnce((key: string) => {
+          if (key === 'JWT_SECRET') return 'salt1';
+          throw new Error(`Unexpected key in getOrThrow mock: ${key}`);
+        })
+        .mockImplementationOnce((key: string) => {
+          if (key === 'JWT_SECRET') return 'salt2';
+          throw new Error(`Unexpected key in getOrThrow mock: ${key}`);
+        });
+
       const service1 = new FingerprintService(mockConfigService);
       const service2 = new FingerprintService(mockConfigService);
 
