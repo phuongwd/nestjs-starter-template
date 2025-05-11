@@ -10,6 +10,10 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    env:
+      SETUP_TOKEN: ${{ secrets.SETUP_TOKEN }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
     steps:
       - name: ":inbox_tray: Checkout Repository"
         uses: actions/checkout@v4
