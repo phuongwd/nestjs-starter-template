@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { DomainRoutingMiddleware } from '../domain-routing.middleware';
 import { CustomDomainService } from '../../services/custom-domain.service';
-import { NotFoundException } from '@nestjs/common';
 import { ORGANIZATION_HEADER } from '@shared/constants';
 
 describe('DomainRoutingMiddleware', () => {
@@ -15,6 +14,7 @@ describe('DomainRoutingMiddleware', () => {
 
   const mockDomainService = {
     findByDomain: jest.fn(),
+    findOrganizationIdByDomain: jest.fn(),
   };
 
   const mockCacheManager = {
@@ -57,6 +57,9 @@ describe('DomainRoutingMiddleware', () => {
   it('should skip middleware for default domain', async () => {
     const req = {
       hostname: 'localhost',
+      path: '/',
+      ip: '127.0.0.1',
+      originalUrl: '/',
       headers: {},
       [ORGANIZATION_HEADER]: undefined,
     } as any;
@@ -74,6 +77,9 @@ describe('DomainRoutingMiddleware', () => {
   it('should use cached organization ID if available', async () => {
     const req = {
       hostname: 'test.example.com',
+      path: '/',
+      ip: '8.8.8.8',
+      originalUrl: '/',
       headers: {},
       [ORGANIZATION_HEADER]: undefined,
     } as any;
@@ -88,7 +94,7 @@ describe('DomainRoutingMiddleware', () => {
     await middleware.use(req, res, next);
 
     expect(req[ORGANIZATION_HEADER]).toBe(organizationId);
-    expect(mockDomainService.findByDomain).not.toHaveBeenCalled();
+    expect(mockDomainService.findOrganizationIdByDomain).not.toHaveBeenCalled();
     expect(next).toHaveBeenCalled();
     expect(res.setHeader).toHaveBeenCalledWith(
       'X-Organization-Domain',
@@ -97,7 +103,13 @@ describe('DomainRoutingMiddleware', () => {
   });
 
   it('should fetch and cache organization ID if not cached', async () => {
-    const req = { hostname: 'test.example.com' } as any;
+    const req = {
+      hostname: 'test.example.com',
+      path: '/',
+      ip: '8.8.8.8',
+      originalUrl: '/',
+      headers: {},
+    } as any;
     const res = {
       setHeader: jest.fn(),
     } as any;
@@ -105,15 +117,14 @@ describe('DomainRoutingMiddleware', () => {
     const organizationId = 1;
 
     mockCacheManager.get.mockResolvedValue(null);
-    mockDomainService.findByDomain.mockResolvedValue({
+    mockDomainService.findOrganizationIdByDomain.mockResolvedValue(
       organizationId,
-      status: 'VERIFIED',
-    });
+    );
 
     await middleware.use(req, res, next);
 
     expect(req[ORGANIZATION_HEADER]).toBe(organizationId);
-    expect(mockDomainService.findByDomain).toHaveBeenCalledWith(
+    expect(mockDomainService.findOrganizationIdByDomain).toHaveBeenCalledWith(
       'test.example.com',
     );
     expect(mockCacheManager.set).toHaveBeenCalledWith(
@@ -124,43 +135,104 @@ describe('DomainRoutingMiddleware', () => {
     expect(next).toHaveBeenCalled();
   });
 
-  it('should throw NotFoundException for non-existent domain', async () => {
-    const req = { hostname: 'nonexistent.example.com' } as any;
+  it('should use default organization for non-existent domain', async () => {
+    const req = {
+      hostname: 'nonexistent.example.com',
+      path: '/',
+      ip: '8.8.8.8',
+      originalUrl: '/',
+      headers: {},
+      [ORGANIZATION_HEADER]: undefined,
+    } as any;
     const res = {
       setHeader: jest.fn(),
     } as any;
     const next = jest.fn();
 
     mockCacheManager.get.mockResolvedValue(null);
-    mockDomainService.findByDomain.mockResolvedValue(null);
+    mockDomainService.findOrganizationIdByDomain.mockResolvedValue(null);
 
-    await expect(middleware.use(req, res, next)).rejects.toThrow(
-      NotFoundException,
+    await middleware.use(req, res, next);
+
+    expect(next).toHaveBeenCalled();
+    expect(req[ORGANIZATION_HEADER]).toBe(1);
+    expect(mockDomainService.findOrganizationIdByDomain).toHaveBeenCalledWith(
+      'nonexistent.example.com',
     );
-    expect(next).not.toHaveBeenCalled();
+    expect(res.setHeader).toHaveBeenCalledWith(
+      'X-Organization-Domain',
+      'nonexistent.example.com',
+    );
   });
 
-  it('should throw NotFoundException for unverified domain', async () => {
-    const req = { hostname: 'unverified.example.com' } as any;
+  it('should use default organization for unverified domain (if service returns null)', async () => {
+    const req = {
+      hostname: 'unverified.example.com',
+      path: '/',
+      ip: '8.8.8.8',
+      originalUrl: '/',
+      headers: {},
+      [ORGANIZATION_HEADER]: undefined,
+    } as any;
     const res = {
       setHeader: jest.fn(),
     } as any;
     const next = jest.fn();
 
     mockCacheManager.get.mockResolvedValue(null);
-    mockDomainService.findByDomain.mockResolvedValue({
-      organizationId: 1,
-      status: 'PENDING',
-    });
+    mockDomainService.findOrganizationIdByDomain.mockResolvedValue(null);
 
-    await expect(middleware.use(req, res, next)).rejects.toThrow(
-      NotFoundException,
+    await middleware.use(req, res, next);
+
+    expect(next).toHaveBeenCalled();
+    expect(req[ORGANIZATION_HEADER]).toBe(1);
+    expect(mockDomainService.findOrganizationIdByDomain).toHaveBeenCalledWith(
+      'unverified.example.com',
     );
-    expect(next).not.toHaveBeenCalled();
+    expect(res.setHeader).toHaveBeenCalledWith(
+      'X-Organization-Domain',
+      'unverified.example.com',
+    );
+  });
+
+  it('should use default organization if cache lookup fails and domain lookup also fails', async () => {
+    const req = {
+      hostname: 'test.example.com',
+      path: '/',
+      ip: '8.8.8.8',
+      originalUrl: '/',
+      headers: {},
+      [ORGANIZATION_HEADER]: undefined,
+    } as any;
+    const res = {
+      setHeader: jest.fn(),
+    } as any;
+    const next = jest.fn();
+
+    mockCacheManager.get.mockRejectedValue(new Error('Cache error'));
+    mockDomainService.findOrganizationIdByDomain.mockResolvedValue(null);
+
+    await middleware.use(req, res, next);
+
+    expect(next).toHaveBeenCalled();
+    expect(req[ORGANIZATION_HEADER]).toBe(1);
+    expect(mockDomainService.findOrganizationIdByDomain).toHaveBeenCalledWith(
+      'test.example.com',
+    );
+    expect(res.setHeader).toHaveBeenCalledWith(
+      'X-Organization-Domain',
+      'test.example.com',
+    );
   });
 
   it('should set security headers', async () => {
-    const req = { hostname: 'test.example.com' } as any;
+    const req = {
+      hostname: 'test.example.com',
+      path: '/',
+      ip: '8.8.8.8',
+      originalUrl: '/',
+      headers: {},
+    } as any;
     const res = {
       setHeader: jest.fn(),
     } as any;
@@ -191,15 +263,32 @@ describe('DomainRoutingMiddleware', () => {
   });
 
   it('should handle errors gracefully', async () => {
-    const req = { hostname: 'test.example.com' } as any;
+    const req = {
+      hostname: 'test.example.com',
+      path: '/',
+      ip: '8.8.8.8',
+      originalUrl: '/',
+      headers: {},
+      [ORGANIZATION_HEADER]: undefined,
+    } as any;
     const res = {
       setHeader: jest.fn(),
     } as any;
     const next = jest.fn();
 
     mockCacheManager.get.mockRejectedValue(new Error('Cache error'));
+    mockDomainService.findOrganizationIdByDomain.mockResolvedValue(null);
 
-    await expect(middleware.use(req, res, next)).rejects.toThrow('Cache error');
-    expect(next).not.toHaveBeenCalled();
+    await middleware.use(req, res, next);
+
+    expect(next).toHaveBeenCalled();
+    expect(req[ORGANIZATION_HEADER]).toBe(1);
+    expect(mockDomainService.findOrganizationIdByDomain).toHaveBeenCalledWith(
+      'test.example.com',
+    );
+    expect(res.setHeader).toHaveBeenCalledWith(
+      'X-Organization-Domain',
+      'test.example.com',
+    );
   });
 });
