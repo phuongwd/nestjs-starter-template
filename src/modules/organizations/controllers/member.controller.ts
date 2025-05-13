@@ -31,6 +31,7 @@ import {
   CanRead,
   CanUpdate,
   CanDelete,
+  RequirePermissions,
 } from '../../../shared/decorators/require-permissions.decorator';
 import { GetUser } from '../../../shared/decorators/get-user.decorator';
 import { User } from '@prisma/client';
@@ -44,6 +45,10 @@ import {
 } from '../types/member.response';
 import { OrganizationId } from '@/shared/decorators/organization-context.decorator';
 import { ORGANIZATION_HEADER } from '@/shared/constants';
+import {
+  ACTIONS,
+  RESOURCE_TYPES,
+} from '@/modules/permissions/constants/permission.constants';
 
 @ApiTags('Organization Members')
 @ApiBearerAuth()
@@ -58,7 +63,10 @@ export class MemberController {
   constructor(private readonly memberService: MemberService) {}
 
   @Post()
-  @CanCreate('member')
+  @RequirePermissions({
+    resource: RESOURCE_TYPES.MEMBER,
+    action: ACTIONS.INVITE,
+  })
   @ApiOperation({ summary: 'Invite a new member to the organization' })
   @ApiResponse({
     status: 201,

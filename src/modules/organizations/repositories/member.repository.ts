@@ -86,6 +86,25 @@ export class MemberRepository
   }
 
   /**
+   * Find a member by invitation token
+   */
+  async findByInvitationToken(
+    invitationToken: string,
+    email: string,
+  ): Promise<MemberWithRelations | null> {
+    return this.withTenantContext(async () => {
+      const result = await this.prisma.organizationMember.findFirst({
+        where: {
+          invitationToken,
+          email,
+        },
+        include: this.getIncludeRelations(),
+      });
+      return result as unknown as MemberWithRelations | null;
+    });
+  }
+
+  /**
    * Find members by organization ID with pagination and filtering
    */
   async findByOrganization(

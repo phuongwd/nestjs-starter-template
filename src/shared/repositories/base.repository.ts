@@ -88,6 +88,7 @@ import {
   NotFoundException,
   ConflictException,
   InternalServerErrorException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TenantContext } from '../context/tenant.context';
@@ -181,6 +182,10 @@ export abstract class BaseRepository<_TEntity> {
 
       if (error instanceof Prisma.PrismaClientInitializationError) {
         throw new InternalServerErrorException('Database connection error');
+      }
+
+      if (error instanceof BadRequestException) {
+        throw error;
       }
 
       throw new InternalServerErrorException(

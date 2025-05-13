@@ -24,4 +24,9 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   organizationId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  invitationToken?: string;
 }
