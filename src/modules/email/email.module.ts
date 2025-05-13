@@ -6,6 +6,7 @@ import { join } from 'path';
 import { EmailService } from './email.service';
 import { EMAIL_TOKENS } from './constants/injection-tokens';
 import { EmailConfig } from '../../config/email.config';
+import { FeatureFlagsConfig } from '@/config/feature-flags.config';
 // import { FeatureFlagsConfig } from '../../config/feature-flags.config';
 
 const DEFAULT_EMAIL_CONFIG: EmailConfig = {
@@ -32,33 +33,33 @@ const DEFAULT_EMAIL_CONFIG: EmailConfig = {
     MailerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService): MailerOptions => {
-        // const nodeEnv = configService.get<string>('NODE_ENV');
-        // const isDevelopment = nodeEnv === 'development';
-        // const isTest = nodeEnv === 'test';
+        const nodeEnv = configService.get<string>('NODE_ENV');
+        const isDevelopment = nodeEnv === 'development';
+        const isTest = nodeEnv === 'test';
 
-        // if (isTest) {
-        //   return {
-        //     transport: { jsonTransport: true },
-        //     defaults: {
-        //       from: 'noreply@test.com',
-        //     },
-        //     template: DEFAULT_EMAIL_CONFIG.template,
-        //   } as MailerOptions;
-        // }
+        if (isTest) {
+          return {
+            transport: { jsonTransport: true },
+            defaults: {
+              from: 'noreply@test.com',
+            },
+            template: DEFAULT_EMAIL_CONFIG.template,
+          } as MailerOptions;
+        }
 
-        // const features = configService.get<FeatureFlagsConfig>('app.features');
+        const features = configService.get<FeatureFlagsConfig>('app.features');
 
-        // // If email is disabled or features not configured, return minimal config
-        // if (!features?.email.enabled) {
-        //   return DEFAULT_EMAIL_CONFIG;
-        // }
+        // If email is disabled or features not configured, return minimal config
+        if (!features?.email.enabled) {
+          return DEFAULT_EMAIL_CONFIG;
+        }
 
         // Helper to get config based on environment and requirements
         const getConfig = <T>(key: string, defaultValue: T): T => {
           // Only throw in production when configuration is required
-          // if (!isDevelopment && features.email.requireConfiguration) {
-          //   return configService.getOrThrow<T>(key);
-          // }
+          if (!isDevelopment && features.email.requireConfiguration) {
+            return configService.getOrThrow<T>(key);
+          }
           return configService.get<T>(key, defaultValue);
         };
 
@@ -75,8 +76,8 @@ const DEFAULT_EMAIL_CONFIG: EmailConfig = {
             tls: {
               rejectUnauthorized: false,
             },
-            debug: true,
-            logger: true,
+            debug: nodeEnv === 'development',
+            logger: nodeEnv === 'development',
           },
           defaults: {
             from: getConfig<string>('SMTP_FROM', 'test@example.com'),

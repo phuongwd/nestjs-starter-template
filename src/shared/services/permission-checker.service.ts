@@ -150,16 +150,6 @@ export class PermissionCheckerService {
         return true;
       }
 
-      // get to cache member and its permissions
-      // const member = await this.memberService.getMember(organizationId, userId);
-      // if (!member) {
-      //   this.logger.warn(
-      //     `Member not found for userId: ${userId}, organizationId: ${organizationId}`,
-      //   );
-      //   this.metrics.errors++;
-      //   return false;
-      // }
-
       // Get user's permissions from Redis
       const permissions =
         await this.organizationPermissionService.getPermissions(
