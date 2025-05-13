@@ -43,6 +43,7 @@ export interface AppConfig {
 export const appConfig = registerAs('app', (): AppConfig => {
   return {
     port: parseInt(process.env.PORT ?? '3000', 10),
+
     api: apiConfig(),
     subscription: subscriptionConfig(),
     features: featureFlagsConfig(),

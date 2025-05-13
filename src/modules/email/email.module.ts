@@ -68,8 +68,8 @@ const DEFAULT_EMAIL_CONFIG: EmailConfig = {
             port: getConfig<number>('SMTP_PORT', 587),
             secure: getConfig<boolean>('SMTP_SECURE', false),
             auth: {
-              user: getConfig<string>('EMAIL_USER', 'test@example.com'),
-              pass: getConfig<string>('EMAIL_PASSWORD', 'test-password'),
+              user: getConfig<string>('SMTP_USER', 'test@example.com'),
+              pass: getConfig<string>('SMTP_PASS', 'test-password'),
             },
           },
           defaults: {
