@@ -113,7 +113,7 @@ export abstract class BaseRepository<_TEntity> {
    */
   protected applyTenantContext<TData extends Record<string, unknown>>(
     data: TData,
-  ): TData & { tenantId?: number } {
+  ): TData & { organizationId?: number } {
     if (!this.isTenantAware()) {
       return data;
     }
@@ -121,7 +121,7 @@ export abstract class BaseRepository<_TEntity> {
     const tenantId = TenantContext.getCurrentTenantId();
     return {
       ...data,
-      tenantId,
+      organizationId: tenantId,
     };
   }
 

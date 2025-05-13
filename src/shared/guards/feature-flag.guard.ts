@@ -26,7 +26,7 @@ export class FeatureFlagGuard implements CanActivate {
       return true; // No feature flag required
     }
 
-    const features = this.configService.get<FeatureFlagsConfig>('features');
+    const features = this.configService.get<FeatureFlagsConfig>('app.features');
     if (!features) {
       throw new Error('Feature flags configuration not found');
     }

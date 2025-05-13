@@ -1,4 +1,4 @@
-import { Module, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
+import { Module, MiddlewareConsumer } from '@nestjs/common';
 import { SubscriptionsController } from './subscriptions.controller';
 import { SubscriptionService } from './services/subscription.service';
 import { PlanService } from './services/plan.service';
@@ -16,8 +16,6 @@ import { TenantContextMiddleware } from '../../shared/middleware/tenant-context.
 })
 export class SubscriptionsModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(TenantContextMiddleware)
-      .forRoutes({ path: 'subscriptions/*', method: RequestMethod.ALL });
+    consumer.apply(TenantContextMiddleware).forRoutes(SubscriptionsController);
   }
 }

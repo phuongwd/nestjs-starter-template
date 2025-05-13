@@ -71,7 +71,7 @@ export class CustomDomainService {
     dto: CreateCustomDomainDto,
   ): Promise<CustomDomainResponseDto> {
     // Check wildcard domain support
-    const features = this.configService.get<FeatureFlagsConfig>('features');
+    const features = this.configService.get<FeatureFlagsConfig>('app.features');
     if (dto.domain.startsWith('*.') && !features?.customDomains.allowWildcard) {
       throw new ForbiddenException('Wildcard domains are not supported');
     }
@@ -137,7 +137,8 @@ export class CustomDomainService {
     }
 
     try {
-      const features = this.configService.get<FeatureFlagsConfig>('features');
+      const features =
+        this.configService.get<FeatureFlagsConfig>('app.features');
       // If SSL is enabled, provision certificate
       if (features?.customDomains.allowSSL) {
         this.logger.log(

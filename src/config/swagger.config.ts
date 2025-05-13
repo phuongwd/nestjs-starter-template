@@ -13,7 +13,7 @@ export function setupSwagger(
 ): void {
   const appUrl =
     configService.get<string>('app.url') || 'http://localhost:3001';
-  const apiVersion = configService.get<string>('api.currentVersion') || '1';
+  const apiVersion = configService.get<string>('app.api.currentVersion') || '1';
   const appName = configService.get<string>('app.name') || 'SAASQALI';
   const appDescription =
     configService.get<string>('app.description') ||

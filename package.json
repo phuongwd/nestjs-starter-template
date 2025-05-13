@@ -9,7 +9,7 @@
     "build": "nest build --webpack && node copy-templates.js",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
-    "start:dev": "nest start --webpack --watch",
+    "start:dev": "nest start --watch",
     "start:dev:https": "USE_HTTPS=true nest start --webpack --watch",
     "generate:ssl": "./scripts/generate-ssl-certs.sh",
     "start:debug": "nest start --debug --watch",

@@ -46,7 +46,7 @@ const DEFAULT_EMAIL_CONFIG: EmailConfig = {
           } as MailerOptions;
         }
 
-        const features = configService.get<FeatureFlagsConfig>('features');
+        const features = configService.get<FeatureFlagsConfig>('app.features');
 
         // If email is disabled or features not configured, return minimal config
         if (!features?.email.enabled) {
@@ -68,8 +68,8 @@ const DEFAULT_EMAIL_CONFIG: EmailConfig = {
             port: getConfig<number>('SMTP_PORT', 587),
             secure: getConfig<boolean>('SMTP_SECURE', false),
             auth: {
-              user: getConfig<string>('SMTP_USER', 'test@example.com'),
-              pass: getConfig<string>('SMTP_PASS', 'test-password'),
+              user: getConfig<string>('EMAIL_USER', 'test@example.com'),
+              pass: getConfig<string>('EMAIL_PASSWORD', 'test-password'),
             },
           },
           defaults: {

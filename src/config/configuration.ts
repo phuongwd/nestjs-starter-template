@@ -40,15 +40,14 @@ export interface AppConfig {
  * │   │       └── requireConfig # Whether configuration is required
  * │   ├── email                # Email configuration
  */
-export const appConfig = registerAs(
-  'app',
-  (): AppConfig => ({
+export const appConfig = registerAs('app', (): AppConfig => {
+  return {
     port: parseInt(process.env.PORT ?? '3000', 10),
     api: apiConfig(),
     subscription: subscriptionConfig(),
     features: featureFlagsConfig(),
     email: emailConfig(),
-  }),
-);
+  };
+});
 
 export default appConfig;

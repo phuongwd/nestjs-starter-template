@@ -26,7 +26,7 @@ export class SubscriptionService {
     private readonly configService: ConfigService,
   ) {
     this.subscriptionConfig =
-      this.configService.get<SubscriptionConfig>('subscription')!;
+      this.configService.get<SubscriptionConfig>('app.subscription')!;
   }
 
   /**

@@ -7,7 +7,6 @@ import {
   IsOptional,
   IsEnum,
   Min,
-  IsDecimal,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -54,7 +53,7 @@ export class CreatePlanDto {
     description: 'Price of the plan',
     minimum: 0,
   })
-  @IsDecimal()
+  @IsNumber()
   @Min(0)
   price!: number;
 
