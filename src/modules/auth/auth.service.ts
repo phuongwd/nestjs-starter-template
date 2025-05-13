@@ -37,6 +37,7 @@ import {
   OAuthPlatform,
 } from './oauth/interfaces/oauth.interface';
 import { IOAuthUserRepository } from './oauth/interfaces/oauth-user-repository.interface';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
@@ -55,6 +56,7 @@ export class AuthService {
     @Inject(OAUTH_INJECTION_TOKENS.REPOSITORY.OAUTH_USER)
     private readonly oauthUserRepository: IOAuthUserRepository,
     private readonly oauthStateService: OAuthStateService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -124,12 +126,15 @@ export class AuthService {
     const refreshTokenId = crypto.randomBytes(32).toString('hex');
     const now = Math.floor(Date.now() / 1000);
 
+    const accessTokenTTL = Number(
+      this.configService.get<string>('ACCESS_TOKEN_TTL') || 15 * 60,
+    );
+    const refreshTokenTTL = Number(
+      this.configService.get<string>('REFRESH_TOKEN_TTL') || 15 * 60,
+    );
+
     // Generate fingerprint using FingerprintService
     const fingerprint = this.fingerprintService.generateFingerprint(req);
-
-    // Convert time strings to seconds
-    const accessTokenExpiry = 15 * 60; // 15 minutes in seconds
-    const refreshTokenExpiry = 7 * 24 * 60 * 60; // 7 days in seconds
 
     // Get current token version for this user
     const tokenVersion = await this.tokenService.getCurrentTokenVersion(
@@ -140,7 +145,7 @@ export class AuthService {
       sub: user.id,
       jti: tokenId,
       iat: now,
-      exp: now + accessTokenExpiry,
+      exp: now + accessTokenTTL,
       fgp: fingerprint,
       ver: tokenVersion, // Use current version instead of hardcoding 1
     };
@@ -150,7 +155,7 @@ export class AuthService {
       sub: user.id,
       jti: refreshTokenId,
       iat: now,
-      exp: now + refreshTokenExpiry,
+      exp: now + refreshTokenTTL,
       fgp: fingerprint,
       ver: tokenVersion, // Use current version instead of hardcoding 1
     };

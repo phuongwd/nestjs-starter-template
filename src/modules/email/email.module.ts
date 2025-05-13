@@ -46,7 +46,7 @@ const DEFAULT_EMAIL_CONFIG: EmailConfig = {
           } as MailerOptions;
         }
 
-        const features = configService.get<FeatureFlagsConfig>('features');
+        const features = configService.get<FeatureFlagsConfig>('app.features');
 
         // If email is disabled or features not configured, return minimal config
         if (!features?.email.enabled) {

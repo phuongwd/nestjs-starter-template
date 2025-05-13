@@ -150,7 +150,7 @@ export class MemberRepository
   ): Promise<MemberWithRelations> {
     return this.withTenantContext(async () => {
       const result = await this.prisma.organizationMember.create({
-        data: this.applyTenantContext(data),
+        data,
         include: this.getIncludeRelations(),
       });
       return result as unknown as MemberWithRelations;

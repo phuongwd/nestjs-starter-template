@@ -52,8 +52,8 @@ async function bootstrap(): Promise<void> {
     httpsOptions,
   });
   const configService = app.get(ConfigService);
-  const apiVersion = configService.get<string>('api.currentVersion') || '1';
-  const apiPrefix = configService.get<string>('api.prefix') || 'api/v';
+  const apiVersion = configService.get<string>('app.api.currentVersion') || '1';
+  const apiPrefix = configService.get<string>('app.api.prefix') || 'api/v';
 
   // Enable API versioning first, before any other middleware
   app.enableVersioning({
@@ -80,7 +80,7 @@ async function bootstrap(): Promise<void> {
   app.enableCors({
     origin: IS_DEVELOPMENT
       ? ['http://localhost:8080', 'http://localhost:3000', '*']
-      : configService.get<string | string[]>('cors.origin') || true,
+      : configService.get<string | string[]>('app.cors.origin') || true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
       'Content-Type',
@@ -109,7 +109,7 @@ async function bootstrap(): Promise<void> {
   app.use((req: Request, res: Response, next: NextFunction) => {
     const version = req.url.match(/\/api\/v(\d+)\//)?.[1];
     const deprecatedVersions =
-      configService.get<string[]>('api.deprecatedVersions') || [];
+      configService.get<string[]>('app.api.deprecatedVersions') || [];
     if (version && deprecatedVersions.includes(version)) {
       res.setHeader('Warning', '299 - "This API version is deprecated"');
     }
@@ -121,11 +121,11 @@ async function bootstrap(): Promise<void> {
     helmet({
       contentSecurityPolicy: {
         directives: {
-          "default-src": ["'self'"],
-          "script-src": ["'self'"],
-          "style-src": ["'self'", "https:"],
-          "img-src": ["'self'", "data:", "https:"],
-          "connect-src": ["'self'"],
+          'default-src': ["'self'"],
+          'script-src': ["'self'"],
+          'style-src': ["'self'", 'https:'],
+          'img-src': ["'self'", 'data:', 'https:'],
+          'connect-src': ["'self'"],
         },
       },
       crossOriginEmbedderPolicy: true,
@@ -154,7 +154,7 @@ async function bootstrap(): Promise<void> {
   setupProcessHandlers();
 
   // Listen on port
-  const port = configService.get<number>('port') || 3001;
+  const port = configService.get<number>('app.port') || 3001;
   await app.listen(port);
 
   // Get startup logger service

@@ -74,12 +74,6 @@ export class OrganizationsModule {
       .exclude(
         { path: 'organizations', method: RequestMethod.POST }, // Exclude organization creation since no tenant context exists yet
       )
-      .forRoutes(
-        { path: 'organizations/*', method: RequestMethod.ALL },
-        { path: 'members', method: RequestMethod.ALL },
-        { path: 'members/*', method: RequestMethod.ALL },
-        { path: 'roles', method: RequestMethod.ALL },
-        { path: 'roles/*', method: RequestMethod.ALL },
-      );
+      .forRoutes(OrganizationsController, MemberController, RoleController);
   }
 }

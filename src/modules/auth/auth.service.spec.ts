@@ -23,6 +23,7 @@ import {
   UserWithoutPasswordResponse,
   UserWithoutPassword,
 } from '../users/types/user.type';
+import { ConfigService } from '@nestjs/config';
 
 describe('AuthService', () => {
   let authService: AuthService;
@@ -31,6 +32,7 @@ describe('AuthService', () => {
   let passwordService: PasswordService;
   let loginAttemptService: LoginAttemptService;
   let tokenService: TokenService;
+  let mockConfigService: Partial<jest.Mocked<ConfigService>>;
 
   const mockUser = {
     id: 1,
@@ -71,6 +73,19 @@ describe('AuthService', () => {
   } as Request;
 
   beforeEach(async () => {
+    mockConfigService = {
+      get: jest.fn().mockImplementation((key: string, defaultValue?: any) => {
+        if (key === 'ACCESS_TOKEN_TTL') {
+          return 15 * 60;
+        }
+        if (key === 'REFRESH_TOKEN_TTL') {
+          return 15 * 60;
+        }
+
+        return defaultValue;
+      }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -138,6 +153,10 @@ describe('AuthService', () => {
             validateState: jest.fn(),
             getAppleUserData: jest.fn(),
           },
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
         },
       ],
     }).compile();
