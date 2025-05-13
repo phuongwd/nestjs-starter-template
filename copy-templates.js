@@ -3,7 +3,7 @@ const path = require('path');
 require('dotenv').config();
 
 // Check if email feature is enabled
-const isEmailEnabled = process.env.EMAIL_ENABLED === 'true';
+const isEmailEnabled = process.env.FEATURE_EMAIL_ENABLED === 'true';
 console.log(`Email feature is ${isEmailEnabled ? 'enabled' : 'disabled'}`);
 
 if (!isEmailEnabled) {

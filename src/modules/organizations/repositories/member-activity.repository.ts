@@ -83,12 +83,12 @@ export class MemberActivityRepository
   ): Promise<void> {
     return this.withTenantContext(async () => {
       await this.prisma.memberActivity.create({
-        data: this.applyTenantContext({
+        data: {
           organizationId,
           memberId,
           action,
           metadata: this.convertMetadataToJson(metadata),
-        }),
+        },
       });
     });
   }

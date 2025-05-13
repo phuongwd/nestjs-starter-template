@@ -4,6 +4,7 @@ import { performance } from 'perf_hooks';
 import { OrganizationPermissionService } from '../../modules/organizations/services/organization-permission.service';
 import { MetricsResponseDto } from '../../modules/monitoring/dtos/metrics.response.dto';
 import { SystemRoleService } from '../../modules/admin/system-roles/services/system-role.service';
+// import { MemberService } from '@/modules/organizations/services/member.service';
 
 interface PermissionMetrics extends MetricsResponseDto {
   totalChecks: number;
@@ -75,6 +76,7 @@ export class PermissionCheckerService {
   constructor(
     private readonly organizationPermissionService: OrganizationPermissionService,
     private readonly systemRoleService: SystemRoleService,
+    // private readonly memberService: MemberService,
   ) {}
 
   /**
@@ -114,7 +116,7 @@ export class PermissionCheckerService {
    * Convert required permission to permission string
    */
   private getPermissionString(required: RequiredPermission): string {
-    return `${required.resource.toUpperCase()}_${required.action.toUpperCase()}`;
+    return `${required.resource.toLowerCase()}:${required.action.toLowerCase()}`;
   }
 
   /**
@@ -158,7 +160,9 @@ export class PermissionCheckerService {
       // Check if user has all required permissions
       const hasAllPermissions = requiredPermissions.every((required) => {
         const permissionString = this.getPermissionString(required);
-        return permissions.some((p) => p.name === permissionString);
+        return permissions.some(
+          (p) => p.name.toLowerCase() === permissionString,
+        );
       });
 
       this.updatePerformanceMetrics(startTime, permissions.length > 0);

@@ -7,7 +7,6 @@ import {
 } from '@nestjs/common';
 import { validate } from 'class-validator';
 import { plainToInstance, ClassConstructor } from 'class-transformer';
-import { ValidationError } from '../types/validation.types';
 
 @Injectable()
 export class ValidationPipe
@@ -38,13 +37,30 @@ export class ValidationPipe
     });
 
     if (errors.length > 0) {
-      const messages: ValidationError[] = errors.map((error) => ({
-        property: error.property,
-        constraints: error.constraints,
-      }));
+      const fieldErrors: Record<string, string> = {};
+      for (const errorObject of errors) {
+        if (errorObject.constraints) {
+          const [message] = Object.values(errorObject.constraints);
+          fieldErrors[errorObject.property] = message;
+        }
+
+        if (errorObject.children && errorObject.children.length > 0) {
+          // build children error
+          const parrentProperty = errorObject.property;
+          for (const childErrorObject of errorObject.children) {
+            if (childErrorObject.constraints) {
+              const [message] = Object.values(childErrorObject.constraints);
+              fieldErrors[`${parrentProperty}.${childErrorObject.property}`] =
+                message;
+            }
+          }
+        }
+      }
+
       throw new BadRequestException({
-        message: 'Validation failed',
-        errors: messages,
+        message:
+          "You have an error in your request's body. Check 'fieldErrors' field for more details!",
+        fieldErrors,
       });
     }
 

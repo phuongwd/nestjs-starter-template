@@ -7,6 +7,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { ERROR_MESSAGES } from './constants/user.constants';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UserWithoutPassword } from './types/user.type';
+import { MemberService } from '@/modules/organizations/services/member.service';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -69,6 +70,12 @@ describe('UsersService', () => {
           provide: PasswordService,
           useValue: {
             hashPassword: jest.fn(),
+          },
+        },
+        {
+          provide: MemberService,
+          useValue: {
+            userRegisteredAcceptInvitation: jest.fn(),
           },
         },
       ],

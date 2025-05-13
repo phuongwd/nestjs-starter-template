@@ -126,12 +126,12 @@ export class AuthService {
     const refreshTokenId = crypto.randomBytes(32).toString('hex');
     const now = Math.floor(Date.now() / 1000);
 
-    const accessTokenTTL = Number(
-      this.configService.get<string>('ACCESS_TOKEN_TTL') || 15 * 60,
-    );
-    const refreshTokenTTL = Number(
-      this.configService.get<string>('REFRESH_TOKEN_TTL') || 15 * 60,
-    );
+    const accessTokenTTL =
+      Number(this.configService.get<string>('ACCESS_TOKEN_TTL') || 15 * 60) *
+      1000;
+    const refreshTokenTTL =
+      Number(this.configService.get<string>('REFRESH_TOKEN_TTL') || 15 * 60) *
+      1000;
 
     // Generate fingerprint using FingerprintService
     const fingerprint = this.fingerprintService.generateFingerprint(req);

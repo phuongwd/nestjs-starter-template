@@ -6,7 +6,8 @@ import { join } from 'path';
 import { EmailService } from './email.service';
 import { EMAIL_TOKENS } from './constants/injection-tokens';
 import { EmailConfig } from '../../config/email.config';
-import { FeatureFlagsConfig } from '../../config/feature-flags.config';
+import { FeatureFlagsConfig } from '@/config/feature-flags.config';
+// import { FeatureFlagsConfig } from '../../config/feature-flags.config';
 
 const DEFAULT_EMAIL_CONFIG: EmailConfig = {
   enabled: false,
@@ -64,6 +65,7 @@ const DEFAULT_EMAIL_CONFIG: EmailConfig = {
 
         return {
           transport: {
+            service: getConfig<string>('SMTP_SERVICE', '') || undefined,
             host: getConfig<string>('SMTP_HOST', 'smtp.gmail.com'),
             port: getConfig<number>('SMTP_PORT', 587),
             secure: getConfig<boolean>('SMTP_SECURE', false),
@@ -71,6 +73,11 @@ const DEFAULT_EMAIL_CONFIG: EmailConfig = {
               user: getConfig<string>('SMTP_USER', 'test@example.com'),
               pass: getConfig<string>('SMTP_PASS', 'test-password'),
             },
+            tls: {
+              rejectUnauthorized: false,
+            },
+            debug: nodeEnv === 'development',
+            logger: nodeEnv === 'development',
           },
           defaults: {
             from: getConfig<string>('SMTP_FROM', 'test@example.com'),

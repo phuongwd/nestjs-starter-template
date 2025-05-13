@@ -14,6 +14,7 @@ import { ERROR_MESSAGES } from './constants/user.constants';
 import { Prisma, User, SystemRole } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdatePasswordDto } from './dto/update-password.dto';
+import { MemberService } from '@/modules/organizations/services/member.service';
 
 @Injectable()
 export class UsersService {
@@ -22,6 +23,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly passwordService: PasswordService,
+    private readonly memberService: MemberService,
   ) {}
 
   /**
@@ -124,6 +126,23 @@ export class UsersService {
           systemRoles: true,
         },
       });
+
+      if (createUserDto.invitationToken) {
+        // If an invitation token is provided, add the user to the organization
+        // Not through error handling, but as a separate process
+        // This is to ensure that the user is created successfully event if the invitation process fails
+        this.memberService
+          .userRegisteredAcceptInvitation(
+            createUserDto.invitationToken,
+            user.id,
+            user.email,
+          )
+          .catch((error) => {
+            this.logger.error(
+              `Error accepting invitation for user ${user.id}: ${error}`,
+            );
+          });
+      }
 
       this.logger.log(`Created new user with id: ${user.id}`);
       return this.excludePassword(user);

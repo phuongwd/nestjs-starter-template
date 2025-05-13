@@ -8,6 +8,12 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 
+interface BadRequestValidationError extends Error {
+  response?: {
+    fieldErrors?: Record<string, string>;
+  };
+}
+
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
@@ -27,11 +33,16 @@ export class HttpExceptionFilter implements ExceptionFilter {
         ? exception.message
         : 'Internal server error';
 
+    const fieldErrors: Record<string, string> | undefined =
+      (exception as BadRequestValidationError)?.response?.fieldErrors ||
+      undefined;
+
     const errorResponse = {
       statusCode: status,
       timestamp: new Date().toISOString(),
       path: request.url,
       message,
+      fieldErrors,
     };
 
     this.logger.error(

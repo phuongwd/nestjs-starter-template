@@ -13,6 +13,12 @@ import { User } from '@prisma/client';
 import { PermissionCheckerService } from '../services/permission-checker.service';
 import { TenantContext } from '../context/tenant.context';
 import { RequestWithUserAndOrganization } from '../types/request.types';
+import {
+  ACTIONS,
+  RESOURCE_TYPES,
+} from '@/modules/permissions/constants/permission.constants';
+import { PrismaService } from '@/prisma/prisma.service';
+import { MemberService } from '@/modules/organizations/services/member.service';
 
 /**
  * Guard that checks if the user has the required permissions for a route
@@ -26,6 +32,8 @@ export class PermissionGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly permissionChecker: PermissionCheckerService,
+    private readonly prisma: PrismaService,
+    private readonly memberService: MemberService,
   ) {}
 
   /**
@@ -83,17 +91,7 @@ export class PermissionGuard implements CanActivate {
       }
     }
 
-    // Standard permission check flow
     const organizationId = this.getOrganizationId(request);
-
-    this.logger.debug('Organization ID from request', {
-      organizationId,
-      path,
-      method,
-      tenantId: TenantContext.getCurrentTenantId(),
-      requestOrgId: request.organizationId,
-    });
-
     // Handle global operations (no specific organization)
     if (!organizationId) {
       if (this.isGlobalListOperation(requiredPermissions)) {
@@ -105,6 +103,31 @@ export class PermissionGuard implements CanActivate {
         'Organization ID is required for this operation',
       );
     }
+
+    if (this.isMemberOperation(path, requiredPermissions)) {
+      this.logger.debug('Get member to cache its permissions');
+      const member = await this.prisma.organizationMember.findFirst({
+        where: {
+          userId: user.id,
+          organizationId: organizationId,
+        },
+      });
+
+      if (!member) {
+        return false;
+      }
+
+      await this.memberService.getMember(organizationId, member.id);
+    }
+
+    // Standard permission check flow
+    this.logger.debug('Organization ID from request', {
+      organizationId,
+      path,
+      method,
+      tenantId: TenantContext.getCurrentTenantId(),
+      requestOrgId: request.organizationId,
+    });
 
     // Check permissions against the resolved organization ID
     const hasPermission = await this.permissionChecker.hasPermissions(
@@ -189,7 +212,9 @@ export class PermissionGuard implements CanActivate {
       pathMatch &&
       method === 'GET' &&
       requiredPermissions.some(
-        (p) => p.resource === 'organizations' && p.action === 'read',
+        (p) =>
+          p.resource === RESOURCE_TYPES.ORGANIZATION &&
+          p.action === ACTIONS.READ,
       )
     );
   }
@@ -210,7 +235,8 @@ export class PermissionGuard implements CanActivate {
       method === 'POST' &&
       pathMatch &&
       requiredPermissions.some(
-        (p) => p.action === 'create' && p.resource === 'organization',
+        (p) =>
+          p.action === 'create' && p.resource === RESOURCE_TYPES.ORGANIZATION,
       )
     );
   }
@@ -224,7 +250,20 @@ export class PermissionGuard implements CanActivate {
   ): boolean {
     return (
       path.includes('/projects') &&
-      requiredPermissions.some((p) => p.resource === 'project')
+      requiredPermissions.some((p) => p.resource === RESOURCE_TYPES.PROJECT)
+    );
+  }
+
+  /**
+   * Check if this is a member operation
+   */
+  private isMemberOperation(
+    path: string,
+    requiredPermissions: RequiredPermission[],
+  ): boolean {
+    return (
+      path.includes('/members') &&
+      requiredPermissions.some((p) => p.resource === RESOURCE_TYPES.MEMBER)
     );
   }
 
@@ -277,8 +316,9 @@ export class PermissionGuard implements CanActivate {
   ): boolean {
     return requiredPermissions.every(
       (p) =>
-        p.action === 'read' &&
-        (p.resource === 'organization' || p.resource === 'organizations'),
+        p.action === ACTIONS.READ &&
+        (p.resource === RESOURCE_TYPES.ORGANIZATION ||
+          p.resource === 'organizations'),
     );
   }
 

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from '../../../core/redis/redis.service';
 import { MemberWithRelations } from '../types/member.types';
 import { Permission } from '@prisma/client';
+import { ConfigService } from '@nestjs/config';
 
 /**
  * Service for managing organization permissions in Redis
@@ -10,9 +11,15 @@ import { Permission } from '@prisma/client';
 export class OrganizationPermissionService {
   private readonly logger = new Logger(OrganizationPermissionService.name);
   private readonly PERMISSION_PREFIX = 'org:perm';
-  private readonly PERMISSION_TTL = 3600; // 1 hour
+  private readonly PERMISSION_TTL: number;
 
-  constructor(private readonly redisService: RedisService) {}
+  constructor(
+    private readonly redisService: RedisService,
+    private readonly config: ConfigService,
+  ) {
+    this.PERMISSION_TTL =
+      this.config.get<number>('PERMISSION_TTL', 3600) * 1000; // Convert to milliseconds
+  }
 
   /**
    * Cache organization permissions for a user

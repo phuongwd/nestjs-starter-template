@@ -266,16 +266,28 @@ export class MemberService {
       }
 
       // Try to get from cache first
-      const cachedMember = await this.memberCacheService.getCachedMember(
-        member.userId,
-        organizationId,
-      );
+      const [cachedMember, cachedPermisson] = await Promise.all([
+        this.memberCacheService.getCachedMember(member.userId, organizationId),
+        this.organizationPermissionService.getPermissions(
+          member.userId,
+          organizationId,
+        ),
+      ]);
+
       if (cachedMember) {
         this.logger.debug(`Cache hit for member ${memberId}`);
+        if (cachedPermisson.length === 0) {
+          await this.organizationPermissionService.cachePermissions(
+            member.userId,
+            organizationId,
+            member,
+          );
+        }
         return cachedMember;
       }
 
       // Cache the member data and permissions
+      this.logger.debug(`Cache miss for member ${memberId}. Apply cache now`);
       await Promise.all([
         this.memberCacheService.cacheMember(
           member.userId,
@@ -446,6 +458,62 @@ export class MemberService {
     const updatedMember = await this.memberRepository.update(member.id, {
       status: MemberStatus.ACTIVE,
       invitationToken: null,
+    });
+
+    // Find admin for notification
+    const admins = await this.memberRepository.findAdmins(organizationId);
+    const admin = admins[0];
+
+    if (admin?.user && member.user) {
+      // Send notification to admin using the helper method
+      await this.emailService.sendInvitationAcceptedNotification(
+        member.organization,
+        this.toEmailUser(member.user),
+        this.toEmailUser(admin.user),
+      );
+    }
+
+    // Track activity
+    await this.memberActivityRepository.trackActivity(
+      organizationId,
+      member.id,
+      ACTIVITY_ACTIONS.INVITATION_ACCEPTED,
+      {
+        type: ACTIVITY_TYPES.INVITATION_RESPONSE,
+        timestamp: new Date().toISOString(),
+        respondedBy: userId,
+        accepted: true,
+      },
+    );
+
+    return updatedMember;
+  }
+
+  async userRegisteredAcceptInvitation(
+    invitationToken: string,
+    userId: number,
+    email: string,
+  ): Promise<MemberWithRelations | undefined> {
+    const member = await this.memberRepository.findByInvitationToken(
+      invitationToken,
+      email,
+    );
+
+    if (!member) {
+      throw new NotFoundException('Invitation not found');
+    }
+
+    const { organizationId } = member;
+
+    if (!member || member.status !== MemberStatus.PENDING_REGISTRATION) {
+      throw new NotFoundException('Invitation not found');
+    }
+
+    // Update member status
+    const updatedMember = await this.memberRepository.update(member.id, {
+      status: MemberStatus.ACTIVE,
+      invitationToken: null,
+      user: { connect: { id: userId } },
     });
 
     // Find admin for notification

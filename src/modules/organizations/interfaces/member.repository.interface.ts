@@ -19,6 +19,11 @@ export interface IMemberRepository {
     userId: number,
   ): Promise<MemberWithRelations | null>;
 
+  findByInvitationToken(
+    invitationToken: string,
+    email: string,
+  ): Promise<MemberWithRelations | null>;
+
   /**
    * Find members by organization ID with pagination and filtering
    */

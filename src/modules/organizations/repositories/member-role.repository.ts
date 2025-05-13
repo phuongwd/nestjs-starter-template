@@ -54,14 +54,12 @@ export class MemberRoleRepository
 
       // Delete existing role assignments
       await this.prisma.memberRole.deleteMany({
-        where: this.applyTenantContext({ memberId }),
+        where: { memberId },
       });
 
       // Create new role assignments
       await this.prisma.memberRole.createMany({
-        data: roles.map((role) => ({
-          ...this.applyTenantContext({ memberId, roleId: role.id }),
-        })),
+        data: roles.map((role) => ({ memberId, roleId: role.id })),
       });
     });
   }
@@ -73,7 +71,7 @@ export class MemberRoleRepository
     return this.withTenantContext(async () => {
       // Delete existing role assignments
       await this.prisma.memberRole.deleteMany({
-        where: this.applyTenantContext({ memberId }),
+        where: { memberId },
       });
 
       // Create new role assignments
@@ -122,7 +120,7 @@ export class MemberRoleRepository
   async removeAllRoles(memberId: number): Promise<void> {
     return this.withTenantContext(async () => {
       await this.prisma.memberRole.deleteMany({
-        where: this.applyTenantContext({ memberId }),
+        where: { memberId },
       });
     });
   }
@@ -133,10 +131,7 @@ export class MemberRoleRepository
   async removeRole(memberId: number, roleId: number): Promise<void> {
     return this.withTenantContext(async () => {
       await this.prisma.memberRole.deleteMany({
-        where: this.applyTenantContext({
-          memberId,
-          roleId,
-        }),
+        where: { memberId, roleId },
       });
     });
   }
