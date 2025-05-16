@@ -49,6 +49,7 @@ import { SystemInitService } from './modules/system/system-init.service';
 
 // Configuration
 import configuration from './config/configuration';
+import { StorageModule } from '@/modules/storage/storage.module';
 
 type ThrottlerRequest = Request & {
   headers: {
@@ -150,6 +151,7 @@ type ThrottlerRequest = Request & {
     MonitoringModule,
     PrometheusModule,
     AccessTokensModule,
+    StorageModule,
   ],
   controllers: [AppController],
   providers: [

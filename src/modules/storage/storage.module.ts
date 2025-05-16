@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { MulterModule } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -7,10 +7,8 @@ import { StorageCacheService } from './services/storage-cache.service';
 import { StorageController } from './controllers/storage.controller';
 import { StorageProviderFactory } from './providers/storage-provider.factory';
 import { INJECTION_TOKENS } from './constants/injection-tokens';
-import { StorageProviderConfigService } from './services/storage-provider-config.service';
-import { StorageProviderConfigController } from './controllers/storage-provider-config.controller';
-import { StorageProviderConfigRepository } from './repositories/storage-provider-config.repository';
 import storageConfig from '../../config/storage.config';
+import { TenantContextMiddleware } from '@/shared/middleware/tenant-context.middleware';
 
 /**
  * Storage module for file operations
@@ -24,7 +22,7 @@ import storageConfig from '../../config/storage.config';
       storage: memoryStorage(),
     }),
   ],
-  controllers: [StorageController, StorageProviderConfigController],
+  controllers: [StorageController],
   providers: [
     {
       provide: INJECTION_TOKENS.SERVICE.STORAGE,
@@ -35,20 +33,15 @@ import storageConfig from '../../config/storage.config';
       provide: INJECTION_TOKENS.FACTORY.STORAGE_PROVIDER,
       useClass: StorageProviderFactory,
     },
-    {
-      provide: INJECTION_TOKENS.REPOSITORY.STORAGE_PROVIDER_CONFIG,
-      useClass: StorageProviderConfigRepository,
-    },
-    {
-      provide: INJECTION_TOKENS.SERVICE.STORAGE_PROVIDER_CONFIG,
-      useClass: StorageProviderConfigService,
-    },
   ],
   exports: [
     INJECTION_TOKENS.SERVICE.STORAGE,
     INJECTION_TOKENS.FACTORY.STORAGE_PROVIDER,
-    INJECTION_TOKENS.SERVICE.STORAGE_PROVIDER_CONFIG,
     StorageCacheService,
   ],
 })
-export class StorageModule {}
+export class StorageModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(TenantContextMiddleware).forRoutes(StorageController);
+  }
+}

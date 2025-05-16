@@ -20,13 +20,13 @@ model User {
   resetTokenExpiresAt DateTime?
   createdAt           DateTime                @default(now())
   updatedAt           DateTime                @updatedAt
+  accessTokens        AccessToken[]
   adminAuditLogs      AdminAuditLog[]
   adminSessions       AdminSession[]
   auditLogs           AuditLog[]
   organizationMembers OrganizationMember[]
   subscriptionNotes   SubscriptionAdminNote[] @relation("SubscriptionNoteAuthor")
   systemRoles         SystemRole[]            @relation("UserSystemRoles")
-  accessTokens        AccessToken[]
 
   @@index([provider, providerId])
   @@map("users")
@@ -393,12 +393,12 @@ model AccessToken {
   name        String
   token       String    @unique
   userId      Int
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   description String?
   createdAt   DateTime  @default(now())
   expiresAt   DateTime?
   lastUsedAt  DateTime?
   scope       String[]  @default(["all"])
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, name])
   @@index([token])

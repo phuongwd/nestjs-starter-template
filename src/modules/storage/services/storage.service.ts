@@ -66,7 +66,11 @@ export class StorageService implements IStorageService, OnModuleInit {
       this.defaultProvider = this.providerFactory.createProvider(
         this.config.defaultProvider,
       );
-      this.providers.set('default', this.defaultProvider);
+      // this.providers.set('default', this.defaultProvider);
+      this.providers.set(
+        this.configService.get<string>('STORAGE_PROVIDER') || 'default',
+        this.defaultProvider,
+      );
 
       this.logger.log(
         'Storage service initialized successfully',
@@ -529,6 +533,7 @@ export class StorageService implements IStorageService, OnModuleInit {
       return this.defaultProvider;
     }
 
+    console.log('this.providers', this.providers);
     const provider = this.providers.get(name);
     if (!provider) {
       throw new StorageConfigurationError(`Provider not found: ${name}`);
