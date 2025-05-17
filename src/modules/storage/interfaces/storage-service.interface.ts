@@ -4,8 +4,10 @@ import {
   DownloadResult,
   StorageItem,
   StorageMetadata,
+  PresignResult,
 } from './storage-provider.interface';
 import { StorageModuleConfig } from './storage-config.interface';
+import { UploadPresignDto } from '@/modules/storage/dto/upload-presign.dto';
 
 /**
  * @interface IStorageService
@@ -18,6 +20,11 @@ import { StorageModuleConfig } from './storage-config.interface';
  * - Must enforce quotas
  */
 export interface IStorageService {
+  presign(
+    dot: UploadPresignDto,
+    organizationId?: string,
+  ): Promise<PresignResult>;
+
   /**
    * Upload a file to storage
    * @param options Upload options

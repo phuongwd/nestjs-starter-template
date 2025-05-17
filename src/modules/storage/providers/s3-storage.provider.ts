@@ -16,6 +16,7 @@ import {
   StorageResult,
   DownloadResult,
   StorageItem,
+  PresignResult,
 } from '../interfaces/storage-provider.interface';
 import {
   S3StorageConfig,
@@ -28,6 +29,7 @@ import {
   StorageFileNotFoundError,
   normalizeStorageError,
 } from '../utils/storage-errors';
+import { UploadPresignDto } from '@/modules/storage/dto/upload-presign.dto';
 
 /**
  * AWS S3 implementation of StorageProvider
@@ -47,6 +49,25 @@ export class S3StorageProvider implements StorageProvider {
       },
       endpoint: config.endpoint,
     });
+  }
+
+  async presign(dto: UploadPresignDto): Promise<PresignResult> {
+    try {
+      const command = new PutObjectCommand({
+        Bucket: this.config.bucket,
+        Key: this.getObjectKey(dto.fileName),
+        ContentType: dto.contentType,
+        ContentMD5: dto.hashedFile,
+        ACL: dto.acl || 'public-read',
+      });
+      const result = await getSignedUrl(this.client, command);
+
+      return {
+        presignUrl: result,
+      };
+    } catch (error) {
+      throw this.normalizeS3Error(error);
+    }
   }
 
   /**

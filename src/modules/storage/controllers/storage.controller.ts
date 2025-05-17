@@ -16,6 +16,7 @@ import {
   Inject,
   Headers,
   Logger,
+  HttpCode,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
@@ -49,6 +50,7 @@ import { IStorageService } from '../interfaces/storage-service.interface';
 import { INJECTION_TOKENS } from '../constants/injection-tokens';
 import { Transform } from 'stream';
 import { OrganizationId } from '@/shared/decorators/organization-context.decorator';
+import { UploadPresignDto } from '@/modules/storage/dto/upload-presign.dto';
 
 /**
  * @class StorageController
@@ -153,6 +155,23 @@ export class StorageController {
       }
       throw error;
     }
+  }
+
+  @Post('/uploads/presign')
+  @ApiOperation({
+    summary: 'Generate presign image url',
+  })
+  @HttpCode(HttpStatus.CREATED)
+  async presignUpload(
+    @Body() dto: UploadPresignDto,
+    @OrganizationId() organizationId: number,
+  ) {
+    const result = await this.storageService.presign(
+      dto,
+      organizationId.toString(),
+    );
+
+    return result;
   }
 
   /**

@@ -3,6 +3,8 @@
  * All storage implementations (Local, S3, DigitalOcean Spaces) must implement this interface
  */
 
+import { UploadPresignDto } from '@/modules/storage/dto/upload-presign.dto';
+
 export interface StorageProvider {
   /**
    * Upload a file to storage
@@ -10,6 +12,7 @@ export interface StorageProvider {
    * @returns Promise with upload result
    */
   upload(options: UploadOptions): Promise<StorageResult>;
+  presign?(dto: UploadPresignDto): Promise<PresignResult>;
 
   /**
    * Download a file from storage
@@ -131,6 +134,11 @@ export interface StorageResult {
    * File metadata
    */
   metadata: StorageMetadata;
+}
+
+export interface PresignResult {
+  presignUrl: string;
+  uploadToken?: string;
 }
 
 /**

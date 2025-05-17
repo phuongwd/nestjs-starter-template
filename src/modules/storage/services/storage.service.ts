@@ -7,6 +7,7 @@ import {
   DownloadResult,
   StorageItem,
   StorageMetadata,
+  PresignResult,
 } from '../interfaces/storage-provider.interface';
 import { StorageModuleConfig } from '../interfaces/storage-config.interface';
 import {
@@ -17,6 +18,7 @@ import { IStorageService } from '../interfaces/storage-service.interface';
 import { IStorageProviderFactory } from '../interfaces/storage-provider-factory.interface';
 import { INJECTION_TOKENS } from '../constants/injection-tokens';
 import { StorageCacheService } from './storage-cache.service';
+import { UploadPresignDto } from '@/modules/storage/dto/upload-presign.dto';
 
 /**
  * @class StorageService
@@ -83,6 +85,25 @@ export class StorageService implements IStorageService, OnModuleInit {
         error instanceof Error ? error.stack : String(error),
         'StorageService',
       );
+      throw error;
+    }
+  }
+
+  async presign(dto: UploadPresignDto): Promise<PresignResult> {
+    try {
+      const storageProvider = this.getProvider(dto.provider);
+
+      if (!storageProvider || !storageProvider.presign) {
+        throw new StorageConfigurationError('Storage provider is required');
+      }
+
+      const result = await storageProvider.presign(dto);
+
+      return result;
+    } catch (error) {
+      this.logger.error('Failed to upload file', {
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
   }
@@ -533,7 +554,6 @@ export class StorageService implements IStorageService, OnModuleInit {
       return this.defaultProvider;
     }
 
-    console.log('this.providers', this.providers);
     const provider = this.providers.get(name);
     if (!provider) {
       throw new StorageConfigurationError(`Provider not found: ${name}`);
