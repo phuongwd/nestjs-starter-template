@@ -31,6 +31,7 @@ const createStorageConfig = (): StorageModuleConfig => {
       10,
     ),
     tempDir: process.env.STORAGE_TEMP_DIR || os.tmpdir(),
+    maxFileSizeMB: parseInt(process.env.STORAGE_MAX_FILE_SIZE_MB || '100', 10),
   } as Partial<StorageModuleConfig>;
 
   // Configure based on provider type

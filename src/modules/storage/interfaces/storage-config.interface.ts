@@ -236,4 +236,6 @@ export interface StorageModuleConfig {
    * Temporary directory for uploads
    */
   tempDir: string;
+
+  maxFileSizeMB: number;
 }

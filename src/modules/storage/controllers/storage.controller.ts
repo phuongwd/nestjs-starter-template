@@ -12,7 +12,6 @@ import {
   HttpStatus,
   HttpException,
   StreamableFile,
-  ParseFilePipeBuilder,
   Inject,
   Headers,
   Logger,
@@ -51,6 +50,7 @@ import { INJECTION_TOKENS } from '../constants/injection-tokens';
 import { Transform } from 'stream';
 import { OrganizationId } from '@/shared/decorators/organization-context.decorator';
 import { UploadPresignDto } from '@/modules/storage/dto/upload-presign.dto';
+import { MaxFileSizePipe } from '@/core/pipes/maxsize-validation.pipe';
 
 /**
  * @class StorageController
@@ -118,13 +118,7 @@ export class StorageController {
   @ApiResponse({ status: 413, description: 'File too large' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async uploadFile(
-    @UploadedFile(
-      new ParseFilePipeBuilder()
-        .addMaxSizeValidator({ maxSize: 10 * 1024 * 1024 }) // 10MB default
-        .build({
-          errorHttpStatusCode: HttpStatus.BAD_REQUEST,
-        }),
-    )
+    @UploadedFile(MaxFileSizePipe)
     file: Express.Multer.File,
     @Body() dto: UploadFileDto,
     @OrganizationId() organizationId?: number,

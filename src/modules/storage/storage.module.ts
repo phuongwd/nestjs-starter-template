@@ -24,19 +24,24 @@ import { TenantContextMiddleware } from '@/shared/middleware/tenant-context.midd
   ],
   controllers: [StorageController],
   providers: [
+    StorageCacheService,
     {
       provide: INJECTION_TOKENS.SERVICE.STORAGE,
       useClass: StorageService,
     },
-    StorageCacheService,
     {
       provide: INJECTION_TOKENS.FACTORY.STORAGE_PROVIDER,
       useClass: StorageProviderFactory,
+    },
+    {
+      provide: INJECTION_TOKENS.CONFIG.MODULE_CONFIG,
+      useValue: storageConfig(),
     },
   ],
   exports: [
     INJECTION_TOKENS.SERVICE.STORAGE,
     INJECTION_TOKENS.FACTORY.STORAGE_PROVIDER,
+    INJECTION_TOKENS.CONFIG.MODULE_CONFIG,
     StorageCacheService,
   ],
 })
