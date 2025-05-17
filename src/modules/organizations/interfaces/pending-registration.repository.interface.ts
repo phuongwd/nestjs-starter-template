@@ -1,4 +1,4 @@
-import { PendingRegistration } from '@prisma/client';
+import { PendingRegistrations } from '@prisma/client';
 
 export interface IPendingRegistrationRepository {
   /**
@@ -7,7 +7,7 @@ export interface IPendingRegistrationRepository {
   findByToken(
     email: string,
     invitationToken: string,
-  ): Promise<PendingRegistration | null>;
+  ): Promise<PendingRegistrations | null>;
 
   /**
    * Create a new pending registration
@@ -17,7 +17,7 @@ export interface IPendingRegistrationRepository {
     organizationId: number;
     invitationToken: string;
     roleNames: string[];
-  }): Promise<PendingRegistration>;
+  }): Promise<PendingRegistrations>;
 
   /**
    * Delete a pending registration
@@ -27,7 +27,7 @@ export interface IPendingRegistrationRepository {
   /**
    * Find expired registrations
    */
-  findExpired(): Promise<PendingRegistration[]>;
+  findExpired(): Promise<PendingRegistrations[]>;
 
   /**
    * Clean up expired registrations

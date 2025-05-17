@@ -9,7 +9,7 @@ datasource db {
 
 model User {
   id                  Int                     @id @default(autoincrement())
-  email               String                  @unique
+  email               String                  @unique(map: "users_email_unique")
   password            String?
   firstName           String
   lastName            String
@@ -17,9 +17,9 @@ model User {
   providerId          String?
   picture             String?
   resetToken          String?
-  resetTokenExpiresAt DateTime?
-  createdAt           DateTime                @default(now())
-  updatedAt           DateTime                @updatedAt
+  resetTokenExpiresAt DateTime?               @db.Timestamp(6)
+  createdAt           DateTime                @default(now()) @db.Timestamp(6)
+  updatedAt           DateTime                @updatedAt @db.Timestamp(6)
   accessTokens        AccessToken[]
   adminAuditLogs      AdminAuditLog[]
   adminSessions       AdminSession[]
@@ -28,23 +28,23 @@ model User {
   subscriptionNotes   SubscriptionAdminNote[] @relation("SubscriptionNoteAuthor")
   systemRoles         SystemRole[]            @relation("UserSystemRoles")
 
-  @@index([provider, providerId])
+  @@index([provider, providerId], map: "users_provider_providerid_index")
   @@map("users")
 }
 
 model Organization {
-  id                   Int                   @id @default(autoincrement())
-  name                 String
-  slug                 String                @unique
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  description          String?
-  pendingRegistrations PendingRegistration[]
-  customDomains        CustomDomain[]
-  memberActivities     MemberActivity[]
-  members              OrganizationMember[]
-  roles                Role[]
-  subscription         Subscription?
+  id                       Int                        @id @default(autoincrement())
+  name                     String
+  slug                     String                     @unique(map: "organizations_slug_unique")
+  createdAt                DateTime                   @default(now()) @db.Timestamp(6)
+  updatedAt                DateTime                   @updatedAt @db.Timestamp(6)
+  description              String?
+  customDomains            CustomDomain[]
+  memberActivities         MemberActivity[]
+  members                  OrganizationMember[]
+  pendingRegistrations     PendingRegistrations[]
+  roles                    Role[]
+  subscription             Subscription?
 
   @@map("organizations")
 }
@@ -55,40 +55,40 @@ model Role {
   description    String?
   organizationId Int?
   isSystemRole   Boolean          @default(false)
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  createdAt      DateTime         @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime         @updatedAt @db.Timestamp(6)
   members        MemberRole[]
   permissions    RolePermission[]
-  organization   Organization?    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization?    @relation(fields: [organizationId], references: [id], onDelete: Cascade, map: "roles_organizationid_foreign")
 
-  @@unique([name, organizationId])
-  @@index([organizationId])
+  @@unique([name, organizationId], map: "roles_name_organizationid_unique")
+  @@index([organizationId], map: "roles_organizationid_index")
   @@map("roles")
 }
 
 model Permission {
   id           Int              @id @default(autoincrement())
-  name         String           @unique
+  name         String           @unique(map: "permissions_name_unique")
   description  String?
   resourceType String
   action       String
-  createdAt    DateTime         @default(now())
+  createdAt    DateTime         @default(now()) @db.Timestamp(6)
   roles        RolePermission[]
 
-  @@index([resourceType, action])
+  @@index([resourceType, action], map: "permissions_resourcetype_action_index")
   @@map("permissions")
 }
 
 model RolePermission {
   roleId       Int
   permissionId Int
-  createdAt    DateTime   @default(now())
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now()) @db.Timestamp(6)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade, map: "role_permissions_permissionid_foreign")
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade, map: "role_permissions_roleid_foreign")
 
   @@id([roleId, permissionId])
-  @@index([roleId])
-  @@index([permissionId])
+  @@index([permissionId], map: "role_permissions_permissionid_index")
+  @@index([roleId], map: "role_permissions_roleid_index")
   @@map("role_permissions")
 }
 
@@ -97,36 +97,36 @@ model OrganizationMember {
   organizationId  Int
   userId          Int?
   status          String           @default("INVITED")
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  invitationToken String?          @unique
+  createdAt       DateTime         @default(now()) @db.Timestamp(6)
+  updatedAt       DateTime         @updatedAt @db.Timestamp(6)
+  invitationToken String?          @unique(map: "organization_members_invitationtoken_unique")
   email           String
   activities      MemberActivity[]
   roles           MemberRole[]
-  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user            User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade, map: "organization_members_organizationid_foreign")
+  user            User?            @relation(fields: [userId], references: [id], onDelete: Cascade, map: "organization_members_userid_foreign")
 
-  @@unique([organizationId, userId])
-  @@unique([organizationId, email])
-  @@index([organizationId])
-  @@index([userId])
-  @@index([email])
-  @@index([status])
-  @@index([organizationId, status])
+  @@unique([organizationId, email], map: "organization_members_organizationid_email_unique")
+  @@unique([organizationId, userId], map: "organization_members_organizationid_userid_unique")
+  @@index([email], map: "organization_members_email_index")
+  @@index([organizationId], map: "organization_members_organizationid_index")
+  @@index([organizationId, status], map: "organization_members_organizationid_status_index")
+  @@index([status], map: "organization_members_status_index")
+  @@index([userId], map: "organization_members_userid_index")
   @@map("organization_members")
 }
 
 model MemberRole {
   memberId  Int
   roleId    Int
-  createdAt DateTime           @default(now())
-  member    OrganizationMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  role      Role               @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  createdAt DateTime           @default(now()) @db.Timestamp(6)
+  member    OrganizationMember @relation(fields: [memberId], references: [id], onDelete: Cascade, map: "member_roles_memberid_foreign")
+  role      Role               @relation(fields: [roleId], references: [id], onDelete: Cascade, map: "member_roles_roleid_foreign")
 
   @@id([memberId, roleId])
-  @@index([memberId])
-  @@index([roleId])
-  @@index([memberId, roleId])
+  @@index([memberId], map: "member_roles_memberid_index")
+  @@index([memberId, roleId], map: "member_roles_memberid_roleid_index")
+  @@index([roleId], map: "member_roles_roleid_index")
   @@map("member_roles")
 }
 
@@ -137,8 +137,8 @@ model Plan {
   features      Json?
   price         Decimal        @db.Decimal(10, 2)
   isActive      Boolean        @default(true)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  createdAt     DateTime       @default(now()) @db.Timestamp(6)
+  updatedAt     DateTime       @updatedAt @db.Timestamp(6)
   interval      String         @default("month")
   memberLimit   Int            @default(5)
   subscriptions Subscription[]
@@ -148,28 +148,28 @@ model Plan {
 
 model Subscription {
   id                 Int                     @id @default(autoincrement())
-  organizationId     Int                     @unique
+  organizationId     Int                     @unique(map: "subscriptions_organizationid_unique")
   planId             Int
   status             String
-  startDate          DateTime
-  endDate            DateTime?
-  trialEndsAt        DateTime?
-  canceledAt         DateTime?
-  currentPeriodStart DateTime
-  currentPeriodEnd   DateTime
+  startDate          DateTime                @db.Timestamp(6)
+  endDate            DateTime?               @db.Timestamp(6)
+  trialEndsAt        DateTime?               @db.Timestamp(6)
+  canceledAt         DateTime?               @db.Timestamp(6)
+  currentPeriodStart DateTime                @db.Timestamp(6)
+  currentPeriodEnd   DateTime                @db.Timestamp(6)
   paymentMethodId    String?
-  createdAt          DateTime                @default(now())
-  updatedAt          DateTime                @updatedAt
-  lastPaymentDate    DateTime?
-  nextPaymentDate    DateTime?
+  createdAt          DateTime                @default(now()) @db.Timestamp(6)
+  updatedAt          DateTime                @updatedAt @db.Timestamp(6)
+  lastPaymentDate    DateTime?               @db.Timestamp(6)
+  nextPaymentDate    DateTime?               @db.Timestamp(6)
   paymentMethod      String?
   paymentReference   String?
   billingHistory     BillingHistory[]
   adminNotes         SubscriptionAdminNote[]
-  organization       Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  plan               Plan                    @relation(fields: [planId], references: [id])
+  organization       Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade, map: "subscriptions_organizationid_foreign")
+  plan               Plan                    @relation(fields: [planId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "subscriptions_planid_foreign")
 
-  @@index([planId])
+  @@index([planId], map: "subscriptions_planid_index")
   @@map("subscriptions")
 }
 
@@ -179,13 +179,13 @@ model SubscriptionAdminNote {
   note           String
   type           String
   createdBy      Int
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  author         User         @relation("SubscriptionNoteAuthor", fields: [createdBy], references: [id])
-  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime     @updatedAt @db.Timestamp(6)
+  author         User         @relation("SubscriptionNoteAuthor", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "subscription_admin_notes_createdby_foreign")
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade, map: "subscription_admin_notes_subscriptionid_foreign")
 
-  @@index([subscriptionId])
-  @@index([createdBy])
+  @@index([createdBy], map: "subscription_admin_notes_createdby_index")
+  @@index([subscriptionId], map: "subscription_admin_notes_subscriptionid_index")
   @@map("subscription_admin_notes")
 }
 
@@ -198,11 +198,11 @@ model BillingHistory {
   paymentMethod   String?
   paymentIntentId String?
   invoiceUrl      String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  subscription    Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  createdAt       DateTime     @default(now()) @db.Timestamp(6)
+  updatedAt       DateTime     @updatedAt @db.Timestamp(6)
+  subscription    Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade, map: "billing_history_subscriptionid_foreign")
 
-  @@index([subscriptionId])
+  @@index([subscriptionId], map: "billing_history_subscriptionid_index")
   @@map("billing_history")
 }
 
@@ -212,75 +212,76 @@ model MemberActivity {
   memberId       Int
   action         String
   metadata       Json?
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  member         OrganizationMember @relation(fields: [memberId], references: [id])
-  organization   Organization       @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime           @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime           @updatedAt @db.Timestamp(6)
+  member         OrganizationMember @relation(fields: [memberId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "member_activities_memberid_foreign")
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "member_activities_organizationid_foreign")
 
-  @@index([organizationId])
-  @@index([memberId])
-  @@index([createdAt])
-  @@index([organizationId, memberId])
-  @@index([organizationId, action])
+  @@index([createdAt], map: "member_activities_createdat_index")
+  @@index([memberId], map: "member_activities_memberid_index")
+  @@index([organizationId, action], map: "member_activities_organizationid_action_index")
+  @@index([organizationId], map: "member_activities_organizationid_index")
+  @@index([organizationId, memberId], map: "member_activities_organizationid_memberid_index")
   @@map("member_activities")
 }
 
-model PendingRegistration {
+model PendingRegistrations {
   id              Int          @id @default(autoincrement())
   email           String
   organizationId  Int
-  invitationToken String       @unique
+  invitationToken String       @unique(map: "pending_registrations_invitationtoken_unique")
   roleNames       String[]
-  expiresAt       DateTime
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  expiresAt       DateTime     @db.Timestamp(6)
+  createdAt       DateTime     @default(now()) @db.Timestamp(6)
+  updatedAt       DateTime     @updatedAt @db.Timestamp(6)
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade, map: "pending_registrations_organizationid_foreign")
 
-  @@index([email])
-  @@index([organizationId])
-  @@index([invitationToken])
+  @@index([email], map: "pending_registrations_email_index")
+  @@index([invitationToken], map: "pending_registrations_invitationtoken_index")
+  @@index([organizationId], map: "pending_registrations_organizationid_index")
+  @@map("pending_registrations")
 }
 
 model CustomDomain {
   id                Int             @id @default(autoincrement())
-  domain            String          @unique
+  domain            String          @unique(map: "custom_domains_domain_unique")
   organizationId    Int
   status            DomainStatus    @default(PENDING)
   verificationToken String?
-  verifiedAt        DateTime?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  organization      Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  verifiedAt        DateTime?       @db.Timestamp(6)
+  createdAt         DateTime        @default(now()) @db.Timestamp(6)
+  updatedAt         DateTime        @updatedAt @db.Timestamp(6)
+  organization      Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade, map: "custom_domains_organizationid_foreign")
   sslCertificate    SslCertificate?
 
-  @@index([domain])
-  @@index([organizationId])
+  @@index([domain], map: "custom_domains_domain_index")
+  @@index([organizationId], map: "custom_domains_organizationid_index")
   @@map("custom_domains")
 }
 
 model SslCertificate {
   id          Int          @id @default(autoincrement())
-  domainId    Int          @unique
+  domainId    Int          @unique(map: "ssl_certificates_domainid_unique")
   certificate String
   privateKey  String
-  issuedAt    DateTime     @default(now())
-  expiresAt   DateTime
+  issuedAt    DateTime     @default(now()) @db.Timestamp(6)
+  expiresAt   DateTime     @db.Timestamp(6)
   provider    String       @default("letsencrypt")
   status      CertStatus   @default(ACTIVE)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  domain      CustomDomain @relation(fields: [domainId], references: [id])
+  createdAt   DateTime     @default(now()) @db.Timestamp(6)
+  updatedAt   DateTime     @updatedAt @db.Timestamp(6)
+  domain      CustomDomain @relation(fields: [domainId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ssl_certificates_domainid_foreign")
 
   @@map("ssl_certificates")
 }
 
 model SystemRole {
   id          Int      @id @default(autoincrement())
-  name        String   @unique
+  name        String   @unique(map: "system_roles_name_unique")
   description String?
   permissions Json
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @db.Timestamp(6)
+  updatedAt   DateTime @updatedAt @db.Timestamp(6)
   users       User[]   @relation("UserSystemRoles")
 
   @@map("system_roles")
@@ -289,19 +290,19 @@ model SystemRole {
 model AdminSession {
   id           Int       @id @default(autoincrement())
   userId       Int
-  token        String    @unique
+  token        String    @unique(map: "admin_sessions_token_unique")
   ipAddress    String?
   userAgent    String?
-  lastActivity DateTime  @default(now())
-  expiresAt    DateTime
-  revokedAt    DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastActivity DateTime  @default(now()) @db.Timestamp(6)
+  expiresAt    DateTime  @db.Timestamp(6)
+  revokedAt    DateTime? @db.Timestamp(6)
+  createdAt    DateTime  @default(now()) @db.Timestamp(6)
+  updatedAt    DateTime  @updatedAt @db.Timestamp(6)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade, map: "admin_sessions_userid_foreign")
 
-  @@index([userId])
-  @@index([token])
-  @@index([expiresAt])
+  @@index([expiresAt], map: "admin_sessions_expiresat_index")
+  @@index([token], map: "admin_sessions_token_index")
+  @@index([userId], map: "admin_sessions_userid_index")
   @@map("admin_sessions")
 }
 
@@ -314,13 +315,13 @@ model AdminAuditLog {
   metadata   Json?
   ipAddress  String?
   userAgent  String?
-  createdAt  DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now()) @db.Timestamp(6)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "admin_audit_logs_userid_foreign")
 
-  @@index([userId])
-  @@index([action])
-  @@index([resource])
-  @@index([createdAt])
+  @@index([action], map: "admin_audit_logs_action_index")
+  @@index([createdAt], map: "admin_audit_logs_createdat_index")
+  @@index([resource], map: "admin_audit_logs_resource_index")
+  @@index([userId], map: "admin_audit_logs_userid_index")
   @@map("admin_audit_logs")
 }
 
@@ -329,8 +330,8 @@ model SecurityAlert {
   type       String
   details    Json
   status     String   @default("PENDING")
-  created_at DateTime @default(now())
-  updated_at DateTime
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  updated_at DateTime @db.Timestamp(6)
 
   @@map("security_alerts")
 }
@@ -342,22 +343,22 @@ model AuditLog {
   resource   String
   details    Json
   ip_address String
-  timestamp  DateTime @default(now())
-  users      User     @relation(fields: [user_id], references: [id])
+  timestamp  DateTime @default(now()) @db.Timestamp(6)
+  users      User     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "audit_logs_user_id_foreign")
 
-  @@index([action])
-  @@index([timestamp])
-  @@index([user_id])
+  @@index([action], map: "audit_logs_action_index")
+  @@index([timestamp], map: "audit_logs_timestamp_index")
+  @@index([user_id], map: "audit_logs_user_id_index")
   @@map("audit_logs")
 }
 
 model SetupToken {
   id           String       @id @default(uuid())
-  token        String       @unique
-  expiresAt    DateTime
+  token        String       @unique(map: "setup_tokens_token_unique")
+  expiresAt    DateTime     @db.Timestamp(6)
   isUsed       Boolean      @default(false)
-  usedAt       DateTime?
-  createdAt    DateTime     @default(now())
+  usedAt       DateTime?    @db.Timestamp(6)
+  createdAt    DateTime     @default(now()) @db.Timestamp(6)
   createdByIp  String
   usedByIp     String?
   fingerprint  String?
@@ -365,9 +366,9 @@ model SetupToken {
   metadata     Json?
   auditEntries SetupAudit[]
 
-  @@index([token])
-  @@index([isUsed])
-  @@index([environment])
+  @@index([environment], map: "setup_tokens_environment_index")
+  @@index([isUsed], map: "setup_tokens_isused_index")
+  @@index([token], map: "setup_tokens_token_index")
   @@map("setup_tokens")
 }
 
@@ -376,33 +377,45 @@ model SetupAudit {
   tokenId   String
   action    String
   ip        String
-  timestamp DateTime   @default(now())
+  timestamp DateTime   @default(now()) @db.Timestamp(6)
   metadata  Json?
   success   Boolean
   error     String?
-  token     SetupToken @relation(fields: [tokenId], references: [id])
+  token     SetupToken @relation(fields: [tokenId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "setup_audit_tokenid_foreign")
 
-  @@index([action])
-  @@index([timestamp])
-  @@index([tokenId])
+  @@index([action], map: "setup_audit_action_index")
+  @@index([timestamp], map: "setup_audit_timestamp_index")
+  @@index([tokenId], map: "setup_audit_tokenid_index")
   @@map("setup_audit")
 }
 
 model AccessToken {
   id          String    @id @default(uuid())
   name        String
-  token       String    @unique
+  token       String    @unique(map: "access_tokens_token_unique")
   userId      Int
   description String?
-  createdAt   DateTime  @default(now())
-  expiresAt   DateTime?
-  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now()) @db.Timestamp(6)
+  expiresAt   DateTime? @db.Timestamp(6)
+  lastUsedAt  DateTime? @db.Timestamp(6)
   scope       String[]  @default(["all"])
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade, map: "access_tokens_userid_foreign")
 
-  @@unique([userId, name])
-  @@index([token])
+  @@unique([userId, name], map: "access_tokens_userid_name_unique")
+  @@index([token], map: "access_tokens_token_index")
   @@map("access_tokens")
+}
+
+model knex_migrations {
+  id             Int       @id @default(autoincrement())
+  name           String?   @db.VarChar(255)
+  batch          Int?
+  migration_time DateTime? @db.Timestamptz(6)
+}
+
+model knex_migrations_lock {
+  index     Int  @id @default(autoincrement())
+  is_locked Int?
 }
 
 enum DomainStatus {

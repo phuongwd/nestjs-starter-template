@@ -6,6 +6,7 @@ import { AdminSessionModule } from './sessions/admin-session.module';
 import { AdminAuditModule } from './audit/admin-audit.module';
 import { AdminOrganizationModule } from './organizations/admin-organization.module';
 import { AdminMonitoringModule } from './monitoring/monitoring.module';
+import { AdminMigrationModule } from '@/modules/admin/migration/migration.module';
 
 /**
  * Root admin module that consolidates all admin-related functionality
@@ -20,6 +21,7 @@ import { AdminMonitoringModule } from './monitoring/monitoring.module';
     AdminAuditModule,
     AdminOrganizationModule,
     AdminMonitoringModule,
+    AdminMigrationModule,
   ],
   exports: [
     SubscriptionAdminModule,
@@ -28,6 +30,7 @@ import { AdminMonitoringModule } from './monitoring/monitoring.module';
     AdminAuditModule,
     AdminOrganizationModule,
     AdminMonitoringModule,
+    AdminMigrationModule,
   ],
 })
 export class AdminModule {}
