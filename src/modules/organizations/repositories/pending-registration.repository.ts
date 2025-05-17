@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { BaseRepository } from '../../../shared/repositories/base.repository';
 import { IPendingRegistrationRepository } from '../interfaces/pending-registration.repository.interface';
-import { PendingRegistration } from '@prisma/client';
+import { PendingRegistrations } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 
 /**
@@ -9,7 +9,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
  */
 @Injectable()
 export class PendingRegistrationRepository
-  extends BaseRepository<PendingRegistration>
+  extends BaseRepository<PendingRegistrations>
   implements IPendingRegistrationRepository
 {
   protected readonly logger = new Logger(PendingRegistrationRepository.name);
@@ -30,9 +30,9 @@ export class PendingRegistrationRepository
     organizationId: number;
     invitationToken: string;
     roleNames: string[];
-  }): Promise<PendingRegistration> {
+  }): Promise<PendingRegistrations> {
     return this.withTenantContext(async () => {
-      return this.prisma.pendingRegistration.create({
+      return this.prisma.pendingRegistrations.create({
         data: {
           ...this.applyTenantContext(data),
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
@@ -47,9 +47,9 @@ export class PendingRegistrationRepository
   async findByToken(
     email: string,
     invitationToken: string,
-  ): Promise<PendingRegistration | null> {
+  ): Promise<PendingRegistrations | null> {
     return this.withTenantContext(async () => {
-      const registration = await this.prisma.pendingRegistration.findFirst({
+      const registration = await this.prisma.pendingRegistrations.findFirst({
         where: this.applyTenantContext({
           email,
           invitationToken,
@@ -73,7 +73,7 @@ export class PendingRegistrationRepository
    */
   async delete(id: number): Promise<void> {
     await this.withTenantContext(async () => {
-      await this.prisma.pendingRegistration.delete({
+      await this.prisma.pendingRegistrations.delete({
         where: this.applyTenantContext({ id }),
       });
     });
@@ -82,9 +82,9 @@ export class PendingRegistrationRepository
   /**
    * Find expired registrations
    */
-  async findExpired(): Promise<PendingRegistration[]> {
+  async findExpired(): Promise<PendingRegistrations[]> {
     return this.withTenantContext(async () => {
-      return this.prisma.pendingRegistration.findMany({
+      return this.prisma.pendingRegistrations.findMany({
         where: this.applyTenantContext({
           expiresAt: {
             lt: new Date(),
@@ -99,7 +99,7 @@ export class PendingRegistrationRepository
    */
   async cleanupExpired(): Promise<number> {
     return this.withTenantContext(async () => {
-      const result = await this.prisma.pendingRegistration.deleteMany({
+      const result = await this.prisma.pendingRegistrations.deleteMany({
         where: this.applyTenantContext({
           expiresAt: {
             lt: new Date(),

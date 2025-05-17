@@ -76,7 +76,7 @@ docker compose logs -f
 1. Clone the repository
 2. Install dependencies: `npm install`
 3. Configure environment: `cp .env.example .env`
-4. Run migrations: `npx prisma migrate dev`
+4. Run migrations: `npm migrate:latest`
 5. Start development: `npm run start:dev`
 
 ## 🧪 Testing
@@ -91,6 +91,50 @@ npm run test:e2e
 # Test coverage
 npm run test:cov
 ```
+
+## [Knex Migration Usage](http://knexjs.org/#Migrations)
+
+To see list of commands of Knex
+
+```bash
+npx knex --help
+```
+
+### Migrating
+To create a migration file, assume file name is **studentCreate**. Run command below:
+
+```bash
+npx knex migrate:make studentCreate ts
+```
+
+Migration file will be placed at `src/knexMigrations` folder.
+
+
+### At local
+To execute to latest manually
+```bash
+yarn run build-ts && npx knex migrate:latest --knexfile=./dev/knexfile.js
+```
+
+after run the migration files successfully, check on the `knex_migrations` table for the history.
+
+To downgrade
+```bash
+node_modules/.bin/knex migrate:down --knexfile=./dev/knexfile.js
+```
+
+### At STAGING / UAT / PROD
+
+Execute through API: `v1/administration/migration/:command`
+
+
+There are 4 actions available for `:command` parameter:
+- **up**:  Run the next migration that has not yet been run.
+- **down**: Undo the last migration that was already run.
+- **rollback**:  Rollback the last batch of migrations performed.
+- **latest**:  Run all migrations that have not yet been run.
+*Make sure you call the API with Administrator access token*
+
 
 ## 🤝 Contributing
 

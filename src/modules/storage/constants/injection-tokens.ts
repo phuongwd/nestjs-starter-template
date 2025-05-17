@@ -1,0 +1,21 @@
+/**
+ * Injection tokens for the Storage module
+ * Used for dependency injection throughout the module
+ */
+export const INJECTION_TOKENS = {
+  SERVICE: {
+    STORAGE: 'STORAGE_SERVICE',
+  },
+  FACTORY: {
+    STORAGE_PROVIDER: 'STORAGE_PROVIDER_FACTORY',
+  },
+  PROVIDER: {
+    LOCAL_STORAGE: 'LOCAL_STORAGE_PROVIDER',
+    S3_STORAGE: 'S3_STORAGE_PROVIDER',
+    DO_SPACES_STORAGE: 'DO_SPACES_STORAGE_PROVIDER',
+    GITHUB_STORAGE: 'GITHUB_STORAGE_PROVIDER',
+  },
+  CONFIG: {
+    MODULE_CONFIG: 'MODULE_CONFIG',
+  },
+} as const;
