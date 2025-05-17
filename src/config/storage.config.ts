@@ -92,6 +92,7 @@ const createStorageConfig = (): StorageModuleConfig => {
         forcePathStyle: process.env.STORAGE_DO_FORCE_PATH_STYLE === 'true',
         rootPath: process.env.STORAGE_DO_ROOT_PATH,
       } as DOSpacesStorageConfig;
+
       break;
 
     case StorageProviderType.GITHUB:

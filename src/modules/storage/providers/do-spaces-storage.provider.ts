@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { S3 } from '@aws-sdk/client-s3';
+import { PutObjectCommand, S3 } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { Readable } from 'stream';
 import {
@@ -9,6 +9,7 @@ import {
   DownloadResult,
   StorageItem,
   StorageMetadata,
+  PresignResult,
 } from '../interfaces/storage-provider.interface';
 import { DOSpacesStorageConfig } from '../interfaces/storage-config.interface';
 import {
@@ -19,6 +20,8 @@ import {
   StorageFileNotFoundError,
   normalizeStorageError,
 } from '../utils/storage-errors';
+import { UploadPresignDto } from '@/modules/storage/dto/upload-presign.dto';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 /**
  * DigitalOcean Spaces implementation of StorageProvider
@@ -43,6 +46,25 @@ export class DOSpacesStorageProvider implements StorageProvider {
       },
       forcePathStyle: config.forcePathStyle ?? false,
     });
+  }
+
+  async presign(dto: UploadPresignDto): Promise<PresignResult> {
+    try {
+      const command = new PutObjectCommand({
+        Bucket: this.config.space,
+        Key: this.getObjectKey(dto.fileName),
+        ContentType: dto.contentType,
+        ContentMD5: dto.hashedFile,
+        ACL: dto.acl || 'public-read',
+      });
+      const result = await getSignedUrl(this.client, command);
+
+      return {
+        presignUrl: result,
+      };
+    } catch (error) {
+      throw normalizeStorageError(error);
+    }
   }
 
   /**
